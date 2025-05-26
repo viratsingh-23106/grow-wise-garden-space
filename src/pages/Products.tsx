@@ -6,77 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
 import NavBar from "@/components/NavBar";
-
-// Mock product data with IoT sensor recommendations
-const products = [
-  {
-    id: 1,
-    name: "Heirloom Tomato Seeds",
-    type: "seeds",
-    price: 12.99,
-    description: "Premium organic heirloom tomato seeds for exceptional flavor",
-    imageUrl: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=500",
-    stockQuantity: 50,
-    sensors: ["soil-moisture", "temperature", "light", "ph"],
-    guidanceSteps: 8
-  },
-  {
-    id: 2,
-    name: "Basil Plant Starter",
-    type: "plants",
-    price: 8.99,
-    description: "Healthy basil plant ready for transplanting",
-    imageUrl: "https://images.unsplash.com/photo-1618164435735-413d3b066c9a?w=500",
-    stockQuantity: 25,
-    sensors: ["humidity", "light", "temperature"],
-    guidanceSteps: 5
-  },
-  {
-    id: 3,
-    name: "Smart Garden Trowel",
-    type: "tools",
-    price: 24.99,
-    description: "Ergonomic trowel with soil analysis capabilities",
-    imageUrl: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=500",
-    stockQuantity: 15,
-    sensors: ["soil-moisture", "ph", "nutrients"],
-    guidanceSteps: 3
-  },
-  {
-    id: 4,
-    name: "Lettuce Seed Mix",
-    type: "seeds",
-    price: 9.99,
-    description: "Variety pack of lettuce seeds for continuous harvest",
-    imageUrl: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=500",
-    stockQuantity: 35,
-    sensors: ["soil-moisture", "temperature", "nutrients"],
-    guidanceSteps: 6
-  },
-  {
-    id: 5,
-    name: "Pepper Plant Bundle",
-    type: "plants",
-    price: 19.99,
-    description: "Set of 3 pepper plants: bell, jalapeño, and habanero",
-    imageUrl: "https://images.unsplash.com/photo-1583663508051-17a4540d4915?w=500",
-    stockQuantity: 20,
-    sensors: ["temperature", "humidity", "light", "soil-moisture"],
-    guidanceSteps: 7
-  },
-  {
-    id: 6,
-    name: "IoT Sensor Starter Kit",
-    type: "tools",
-    price: 149.99,
-    description: "Complete sensor kit for monitoring soil and environment",
-    imageUrl: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500",
-    stockQuantity: 10,
-    sensors: ["all"],
-    guidanceSteps: 10
-  }
-];
 
 const sensorTypes = {
   "soil-moisture": { name: "Soil Moisture", color: "bg-blue-100 text-blue-800" },
@@ -91,6 +25,21 @@ const sensorTypes = {
 const Products = () => {
   const [selectedType, setSelectedType] = useState("all");
   const [sortBy, setSortBy] = useState("name");
+  const { addToCart } = useCart();
+  const { user } = useAuth();
+
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const filteredProducts = products
     .filter(product => selectedType === "all" || product.type === selectedType)
@@ -104,6 +53,21 @@ const Products = () => {
           return 0;
       }
     });
+
+  const handleAddToCart = async (productId: string) => {
+    await addToCart(productId, 1);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+        <NavBar />
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center">Loading products...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
@@ -154,7 +118,7 @@ const Products = () => {
             <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-0 shadow-lg bg-white/80 backdrop-blur-sm overflow-hidden">
               <div className="aspect-square overflow-hidden">
                 <img 
-                  src={product.imageUrl} 
+                  src={product.image_url || 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=500'} 
                   alt={product.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 />
@@ -184,7 +148,7 @@ const Products = () => {
                     Recommended Sensors:
                   </h4>
                   <div className="flex flex-wrap gap-1">
-                    {product.sensors.map((sensor) => (
+                    {product.sensors?.map((sensor) => (
                       <Badge 
                         key={sensor} 
                         variant="secondary" 
@@ -198,15 +162,19 @@ const Products = () => {
 
                 {/* Guidance Steps */}
                 <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>{product.guidanceSteps} guidance steps</span>
-                  <span>{product.stockQuantity} in stock</span>
+                  <span>{product.guidance_steps} guidance steps</span>
+                  <span>{product.stock_quantity} in stock</span>
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+                  <Button 
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => handleAddToCart(product.id)}
+                    disabled={!user}
+                  >
                     <ShoppingCart className="h-4 w-4 mr-2" />
-                    Add to Cart
+                    {user ? 'Add to Cart' : 'Sign in to Buy'}
                   </Button>
                   <Button asChild variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
                     <Link to={`/products/${product.id}`}>

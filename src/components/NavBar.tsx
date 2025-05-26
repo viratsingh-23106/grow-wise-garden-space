@@ -1,14 +1,25 @@
 
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingCart, User } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, ShoppingCart, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const NavBar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const cartItems = 0; // This will be managed by a cart context later
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { getTotalItems } = useCart();
+  const cartItems = getTotalItems();
 
   const navigation = [
     { name: "Products", href: "/products" },
@@ -20,6 +31,11 @@ const NavBar = () => {
 
   const isActiveRoute = (href: string) => {
     return location.pathname === href;
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
 
   return (
@@ -55,7 +71,7 @@ const NavBar = () => {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm" className="relative">
+            <Button variant="ghost" size="sm" className="relative" onClick={() => navigate('/cart')}>
               <ShoppingCart className="h-5 w-5" />
               {cartItems > 0 && (
                 <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-green-600">
@@ -63,12 +79,29 @@ const NavBar = () => {
                 </Badge>
               )}
             </Button>
-            <Button variant="ghost" size="sm">
-              <User className="h-5 w-5" />
-            </Button>
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
-              Sign In
-            </Button>
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => navigate('/auth')}>
+                Sign In
+              </Button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -104,7 +137,7 @@ const NavBar = () => {
               </Link>
             ))}
             <div className="flex items-center space-x-4 px-3 py-2">
-              <Button variant="ghost" size="sm" className="relative">
+              <Button variant="ghost" size="sm" className="relative" onClick={() => { navigate('/cart'); setIsOpen(false); }}>
                 <ShoppingCart className="h-5 w-5" />
                 {cartItems > 0 && (
                   <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-green-600">
@@ -112,12 +145,17 @@ const NavBar = () => {
                   </Badge>
                 )}
               </Button>
-              <Button variant="ghost" size="sm">
-                <User className="h-5 w-5" />
-              </Button>
-              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
-                Sign In
-              </Button>
+              
+              {user ? (
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              ) : (
+                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => { navigate('/auth'); setIsOpen(false); }}>
+                  Sign In
+                </Button>
+              )}
             </div>
           </div>
         </div>
