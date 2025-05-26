@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Filter, ShoppingCart, ArrowRight } from "lucide-react";
@@ -197,8 +196,10 @@ const Products = () => {
               Monitor soil moisture, temperature, humidity, light, pH, and nutrients with our comprehensive sensor package
             </p>
             <div className="flex justify-center">
-              <Button size="lg" variant="secondary" className="bg-white text-green-600 hover:bg-gray-100">
-                View Sensor Kit Details <ArrowRight className="ml-2 h-5 w-5" />
+              <Button asChild size="lg" variant="secondary" className="bg-white text-green-600 hover:bg-gray-100">
+                <Link to="/sensor-kit">
+                  View Sensor Kit Details <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
               </Button>
             </div>
           </div>

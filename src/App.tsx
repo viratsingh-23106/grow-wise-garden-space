@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Guidance from "./pages/Guidance";
 import Auth from "./pages/Auth";
 import Cart from "./pages/Cart";
+import SensorKit from "./pages/SensorKit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/products" element={<Products />} />
               <Route path="/products/:id" element={<ProductDetail />} />
+              <Route path="/sensor-kit" element={<SensorKit />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/guidance" element={<Guidance />} />
               <Route path="/auth" element={<Auth />} />
