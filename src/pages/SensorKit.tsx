@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Thermometer, Droplets, Sun, FlaskConical, Zap, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import NavBar from "@/components/NavBar";
 
 const sensorFeatures = [
@@ -58,13 +59,70 @@ const SensorKit = () => {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [sensorKitProduct, setSensorKitProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSensorKitProduct = async () => {
+      try {
+        // Look for a product that has all sensor types or is specifically a sensor kit
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .or('name.ilike.%sensor kit%,name.ilike.%iot%')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setSensorKitProduct(data[0]);
+        } else {
+          // If no sensor kit found, create a fallback product data
+          setSensorKitProduct({
+            id: null,
+            name: 'Complete IoT Sensor Kit',
+            price: 149.99,
+            description: 'Monitor soil moisture, temperature, humidity, light, pH, and nutrients with our comprehensive sensor package',
+            stock_quantity: 25
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching sensor kit product:', error);
+        // Fallback product data
+        setSensorKitProduct({
+          id: null,
+          name: 'Complete IoT Sensor Kit',
+          price: 149.99,
+          description: 'Monitor soil moisture, temperature, humidity, light, pH, and nutrients with our comprehensive sensor package',
+          stock_quantity: 25
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSensorKitProduct();
+  }, []);
 
   const handleAddToCart = async () => {
-    // Find the sensor kit product (assuming it's the last one with ID ending in specific pattern)
-    // In a real app, you'd fetch this from the database
-    const sensorKitProductId = "sensor-kit-id"; // This would be the actual product ID
-    await addToCart(sensorKitProductId, selectedQuantity);
+    if (!sensorKitProduct || !sensorKitProduct.id) {
+      console.log('No sensor kit product available to add to cart');
+      return;
+    }
+    await addToCart(sensorKitProduct.id, selectedQuantity);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+        <NavBar />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-xl">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
@@ -86,14 +144,15 @@ const SensorKit = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Complete IoT Sensor Kit
+                {sensorKitProduct?.name || 'Complete IoT Sensor Kit'}
               </h1>
               <p className="text-xl text-gray-600 mb-6">
-                Monitor every aspect of your garden with our comprehensive sensor package. 
-                Get real-time data on soil moisture, temperature, humidity, light, pH, and nutrients.
+                {sensorKitProduct?.description || 'Monitor every aspect of your garden with our comprehensive sensor package. Get real-time data on soil moisture, temperature, humidity, light, pH, and nutrients.'}
               </p>
               <div className="flex items-center gap-4 mb-6">
-                <span className="text-3xl font-bold text-green-600">$149.99</span>
+                <span className="text-3xl font-bold text-green-600">
+                  ${sensorKitProduct?.price || '149.99'}
+                </span>
                 <Badge variant="secondary" className="bg-green-100 text-green-800">
                   Complete Kit
                 </Badge>
@@ -117,9 +176,9 @@ const SensorKit = () => {
                 <Button 
                   className="bg-green-600 hover:bg-green-700"
                   onClick={handleAddToCart}
-                  disabled={!user}
+                  disabled={!user || !sensorKitProduct?.id}
                 >
-                  {user ? 'Add to Cart' : 'Sign in to Buy'}
+                  {!user ? 'Sign in to Buy' : !sensorKitProduct?.id ? 'Product Unavailable' : 'Add to Cart'}
                 </Button>
               </div>
             </div>
@@ -247,9 +306,9 @@ const SensorKit = () => {
             variant="secondary" 
             className="bg-white text-green-600 hover:bg-gray-100"
             onClick={handleAddToCart}
-            disabled={!user}
+            disabled={!user || !sensorKitProduct?.id}
           >
-            {user ? 'Add to Cart - $149.99' : 'Sign In to Purchase'}
+            {!user ? 'Sign In to Purchase' : !sensorKitProduct?.id ? 'Product Unavailable' : `Add to Cart - $${sensorKitProduct?.price || '149.99'}`}
           </Button>
         </div>
       </div>
