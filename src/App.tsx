@@ -10,7 +10,7 @@ import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Dashboard from "./pages/Dashboard";
-import Guidance from "./pages/Guidance";
+import Learn from "./pages/Learn";
 import Auth from "./pages/Auth";
 import Cart from "./pages/Cart";
 import SensorKit from "./pages/SensorKit";
@@ -32,12 +32,13 @@ const App = () => (
               <Route path="/products/:id" element={<ProductDetail />} />
               <Route path="/sensor-kit" element={<SensorKit />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/guidance" element={<Guidance />} />
+              <Route path="/learn" element={<Learn />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/cart" element={<Cart />} />
-              {/* Placeholder routes for future pages */}
-              <Route path="/blog" element={<div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-bold text-gray-900">Blog Page - Coming Soon</h1></div>} />
-              <Route path="/community" element={<div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-bold text-gray-900">Community Page - Coming Soon</h1></div>} />
+              {/* Legacy redirects for old routes */}
+              <Route path="/guidance" element={<Learn />} />
+              <Route path="/blog" element={<Learn />} />
+              <Route path="/community" element={<Learn />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

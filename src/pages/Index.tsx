@@ -21,15 +21,15 @@ const Index = () => {
     },
     {
       icon: Calendar,
-      title: "Monthly Guidance",
-      description: "Seasonal recommendations and step-by-step growing guides",
-      link: "/guidance"
+      title: "Learn & Connect",
+      description: "Guides, community discussions, and expert knowledge sharing",
+      link: "/learn"
     },
     {
       icon: User,
       title: "Community Hub",
       description: "Connect with other gardeners, attend webinars, and share knowledge",
-      link: "/community"
+      link: "/learn"
     }
   ];
 
@@ -144,9 +144,9 @@ const Index = () => {
           <p className="mb-6">Empowering gardeners with technology and knowledge</p>
           <div className="flex justify-center space-x-6">
             <Link to="/products" className="hover:text-white transition-colors">Products</Link>
-            <Link to="/guidance" className="hover:text-white transition-colors">Guidance</Link>
-            <Link to="/blog" className="hover:text-white transition-colors">Blog</Link>
-            <Link to="/community" className="hover:text-white transition-colors">Community</Link>
+            <Link to="/learn" className="hover:text-white transition-colors">Learn</Link>
+            <Link to="/learn" className="hover:text-white transition-colors">Blog</Link>
+            <Link to="/learn" className="hover:text-white transition-colors">Community</Link>
           </div>
         </div>
       </footer>

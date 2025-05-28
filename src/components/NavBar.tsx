@@ -23,13 +23,18 @@ const NavBar = () => {
 
   const navigation = [
     { name: "Products", href: "/products" },
-    { name: "Guidance", href: "/guidance" },
+    { name: "Learn", href: "/learn" },
     { name: "Dashboard", href: "/dashboard" },
-    { name: "Blog", href: "/blog" },
-    { name: "Community", href: "/community" },
   ];
 
   const isActiveRoute = (href: string) => {
+    // Special handling for learn route to match legacy routes
+    if (href === "/learn") {
+      return location.pathname === "/learn" || 
+             location.pathname === "/guidance" || 
+             location.pathname === "/blog" || 
+             location.pathname === "/community";
+    }
     return location.pathname === href;
   };
 
