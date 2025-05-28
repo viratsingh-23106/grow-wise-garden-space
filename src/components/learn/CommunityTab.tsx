@@ -28,7 +28,6 @@ const CommunityTab = ({ searchQuery }: CommunityTabProps) => {
         .select(`
           *,
           discussion_categories(name),
-          profiles(full_name),
           discussion_replies(count)
         `)
         .eq('status', 'active')
@@ -190,7 +189,7 @@ const CommunityTab = ({ searchQuery }: CommunityTabProps) => {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1">
                       <User className="h-4 w-4" />
-                      {discussion.profiles?.full_name || 'Anonymous'}
+                      Community Member
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
