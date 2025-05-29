@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -89,7 +90,7 @@ const ProductDetail = () => {
       if (avgError || countError) throw avgError || countError;
       
       return {
-        averageRating: parseFloat(avgData || 0),
+        averageRating: parseFloat(avgData?.toString() || '0'),
         totalReviews: countData || 0,
       };
     },

@@ -16,7 +16,7 @@ const ReviewsList = ({ productId }: ReviewsListProps) => {
         .from('product_reviews')
         .select(`
           *,
-          profiles!product_reviews_user_id_fkey(full_name)
+          profiles(full_name)
         `)
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
@@ -38,7 +38,7 @@ const ReviewsList = ({ productId }: ReviewsListProps) => {
       if (avgError || countError) throw avgError || countError;
       
       return {
-        averageRating: parseFloat(avgData || '0'),
+        averageRating: parseFloat(avgData?.toString() || '0'),
         totalReviews: countData || 0,
       };
     },
