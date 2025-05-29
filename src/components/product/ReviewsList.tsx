@@ -8,6 +8,19 @@ interface ReviewsListProps {
   productId: string;
 }
 
+interface Review {
+  id: string;
+  product_id: string;
+  user_id: string;
+  rating: number;
+  review_text: string | null;
+  created_at: string;
+  updated_at: string;
+  profiles: {
+    full_name: string | null;
+  } | null;
+}
+
 const ReviewsList = ({ productId }: ReviewsListProps) => {
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['product-reviews', productId],
@@ -22,7 +35,7 @@ const ReviewsList = ({ productId }: ReviewsListProps) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as Review[];
     },
   });
 
