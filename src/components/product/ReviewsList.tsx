@@ -1,4 +1,3 @@
-
 import { Star, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -29,7 +28,7 @@ const ReviewsList = ({ productId }: ReviewsListProps) => {
         .from('product_reviews')
         .select(`
           *,
-          profiles(full_name)
+          profiles!product_reviews_user_id_fkey(full_name)
         `)
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
