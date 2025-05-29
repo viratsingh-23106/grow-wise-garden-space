@@ -13,7 +13,9 @@ import Dashboard from "./pages/Dashboard";
 import Learn from "./pages/Learn";
 import Auth from "./pages/Auth";
 import Cart from "./pages/Cart";
+import Orders from "./pages/Orders";
 import SensorKit from "./pages/SensorKit";
+import GuidanceSteps from "./components/learn/GuidanceSteps";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,8 +35,10 @@ const App = () => (
               <Route path="/sensor-kit" element={<SensorKit />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/learn" element={<Learn />} />
+              <Route path="/guidance/:categoryId/steps" element={<GuidanceSteps />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/cart" element={<Cart />} />
+              <Route path="/orders" element={<Orders />} />
               {/* Legacy redirects for old routes */}
               <Route path="/guidance" element={<Learn />} />
               <Route path="/blog" element={<Learn />} />

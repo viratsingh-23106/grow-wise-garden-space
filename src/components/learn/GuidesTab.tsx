@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface GuidesTabProps {
   searchQuery: string;
@@ -14,6 +15,7 @@ interface GuidesTabProps {
 
 const GuidesTab = ({ searchQuery }: GuidesTabProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
 
   const { data: categories } = useQuery({
@@ -40,6 +42,19 @@ const GuidesTab = ({ searchQuery }: GuidesTabProps) => {
       return data;
     },
     enabled: !!user
+  });
+
+  // Sample guides data - in real app this would come from the database
+  const { data: guides } = useQuery({
+    queryKey: ['growth-guides'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('growth_guides')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
   });
 
   const monthlyTips = [
@@ -89,6 +104,10 @@ const GuidesTab = ({ searchQuery }: GuidesTabProps) => {
       image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500"
     }
   ];
+
+  const handleStartLearning = (guide: any) => {
+    navigate(`/guidance/${guide.id}/steps`);
+  };
 
   return (
     <div className="space-y-8">
@@ -154,8 +173,56 @@ const GuidesTab = ({ searchQuery }: GuidesTabProps) => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Button variant="outline" size="sm" className="w-full border-green-600 text-green-600 hover:bg-green-50">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full border-green-600 text-green-600 hover:bg-green-50"
+                    onClick={() => navigate(`/guidance/${progress.guide_id}/steps`)}
+                  >
                     Continue Learning
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Available Guides from Database */}
+      {guides && guides.length > 0 && (
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">Available Guides</h2>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {guides
+              .filter(guide => 
+                !searchQuery || 
+                guide.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                guide.description?.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .map((guide) => (
+              <Card key={guide.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-0 shadow-lg bg-white/80 backdrop-blur-sm overflow-hidden cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-gray-900">
+                    {guide.title}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    {guide.description}
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent>
+                  <div className="flex items-center justify-between mb-4">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      {guide.total_steps} steps
+                    </Badge>
+                  </div>
+                  
+                  <Button 
+                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => handleStartLearning(guide)}
+                  >
+                    Start Learning <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </CardContent>
               </Card>

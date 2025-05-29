@@ -1,3 +1,4 @@
+
 import { Star, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -37,7 +38,7 @@ const ReviewsList = ({ productId }: ReviewsListProps) => {
       if (avgError || countError) throw avgError || countError;
       
       return {
-        averageRating: parseFloat(avgData || 0),
+        averageRating: parseFloat(avgData || '0'),
         totalReviews: countData || 0,
       };
     },
