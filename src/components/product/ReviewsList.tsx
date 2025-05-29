@@ -16,7 +16,7 @@ const ReviewsList = ({ productId }: ReviewsListProps) => {
         .from('product_reviews')
         .select(`
           *,
-          profiles(full_name)
+          profiles!inner(full_name)
         `)
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
