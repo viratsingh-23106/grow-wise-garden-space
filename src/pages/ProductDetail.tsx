@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -11,6 +10,9 @@ import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import NavBar from "@/components/NavBar";
+import GrowingGuideSection from "@/components/product/GrowingGuideSection";
+import ReviewForm from "@/components/product/ReviewForm";
+import ReviewsList from "@/components/product/ReviewsList";
 
 const sensorTypes = {
   "soil-moisture": { name: "Soil Moisture", color: "bg-blue-100 text-blue-800" },
@@ -71,6 +73,27 @@ const ProductDetail = () => {
       return { ...guide, steps: steps || [] };
     },
     enabled: !!product,
+  });
+
+  const { data: reviewStats } = useQuery({
+    queryKey: ['product-stats', id],
+    queryFn: async () => {
+      if (!id) return null;
+      
+      const { data: avgData, error: avgError } = await supabase
+        .rpc('get_product_average_rating', { product_uuid: id });
+      
+      const { data: countData, error: countError } = await supabase
+        .rpc('get_product_review_count', { product_uuid: id });
+
+      if (avgError || countError) throw avgError || countError;
+      
+      return {
+        averageRating: parseFloat(avgData || 0),
+        totalReviews: countData || 0,
+      };
+    },
+    enabled: !!id,
   });
 
   const increaseQuantity = () => {
@@ -151,11 +174,18 @@ const ProductDetail = () => {
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star 
                       key={star} 
-                      className={`h-5 w-5 ${star <= 4 ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`} 
+                      className={`h-5 w-5 ${
+                        star <= (reviewStats?.averageRating || 0) 
+                          ? "text-yellow-500 fill-yellow-500" 
+                          : "text-gray-300"
+                      }`} 
                     />
                   ))}
                 </div>
-                <span className="ml-2 text-sm text-gray-600">4.0 (12 reviews)</span>
+                <span className="ml-2 text-sm text-gray-600">
+                  {reviewStats?.averageRating ? reviewStats.averageRating.toFixed(1) : '0.0'} 
+                  ({reviewStats?.totalReviews || 0} reviews)
+                </span>
               </div>
             </div>
             
@@ -285,79 +315,19 @@ const ProductDetail = () => {
             <div className="bg-white rounded-lg shadow-md p-6">
               {guideLoading ? (
                 <div className="text-center py-8">Loading growth guide...</div>
-              ) : growthGuide ? (
-                <>
-                  <h2 className="text-2xl font-semibold mb-2">{growthGuide.title}</h2>
-                  <p className="text-gray-600 mb-6">{growthGuide.description}</p>
-                  
-                  <div className="space-y-8">
-                    {growthGuide.steps?.map((step) => (
-                      <div key={step.id} className="border-l-4 border-green-500 pl-4">
-                        <div className="flex items-center">
-                          <span className="bg-green-500 text-white text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3">
-                            {step.step_number}
-                          </span>
-                          <h3 className="text-xl font-medium">{step.title}</h3>
-                        </div>
-                        
-                        <p className="mt-2 text-gray-600">{step.description}</p>
-                        
-                        {(step.video_url || step.document_url) && (
-                          <div className="mt-4 flex flex-wrap gap-4">
-                            {step.video_url && (
-                              <div className="w-full md:w-1/2">
-                                <div className="aspect-video bg-gray-100 rounded flex items-center justify-center">
-                                  <iframe 
-                                    className="w-full h-full rounded"
-                                    src={step.video_url}
-                                    title={`Step ${step.step_number} video`}
-                                    allowFullScreen
-                                  ></iframe>
-                                </div>
-                              </div>
-                            )}
-                            
-                            {step.document_url && (
-                              <Button variant="outline" className="mt-2">
-                                <Link to={step.document_url} target="_blank" rel="noopener noreferrer">
-                                  View Documentation
-                                </Link>
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                        
-                        {step.estimated_duration && (
-                          <Badge variant="outline" className="mt-3">
-                            Duration: {step.estimated_duration}
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </>
               ) : (
-                <div className="text-center py-8">
-                  <p className="mb-4">No growth guide available for this product yet.</p>
-                  <p className="text-gray-600">Check back soon for detailed instructions!</p>
-                </div>
+                <GrowingGuideSection 
+                  productId={id!} 
+                  growthGuide={growthGuide} 
+                />
               )}
             </div>
           </TabsContent>
           
           <TabsContent value="reviews" className="mt-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-2xl font-semibold mb-4">Customer Reviews</h2>
-              <div className="text-center py-8">
-                <p className="mb-4">No reviews available for this product yet.</p>
-                {user ? (
-                  <Button className="bg-green-600 hover:bg-green-700">
-                    Write a Review
-                  </Button>
-                ) : (
-                  <p className="text-gray-600">Sign in to leave a review</p>
-                )}
-              </div>
+            <div className="space-y-6">
+              <ReviewForm productId={id!} />
+              <ReviewsList productId={id!} />
             </div>
           </TabsContent>
         </Tabs>

@@ -609,7 +609,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_product_average_rating: {
+        Args: { product_uuid: string }
+        Returns: number
+      }
+      get_product_review_count: {
+        Args: { product_uuid: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
