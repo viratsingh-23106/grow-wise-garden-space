@@ -1,232 +1,160 @@
 
 import { useState } from "react";
-import { MessageSquare, Users, PlusCircle, Calendar, User } from "lucide-react";
+import { MessageSquare, Users, TrendingUp, Clock, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import CommunityParticipantForm from "@/components/learn/CommunityParticipantForm";
-import DiscussionForm from "@/components/learn/DiscussionForm";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ScrollableDiscussionForm from "./ScrollableDiscussionForm";
 
 interface CommunityTabProps {
   searchQuery: string;
 }
 
 const CommunityTab = ({ searchQuery }: CommunityTabProps) => {
-  const { user } = useAuth();
-  const [isParticipantFormOpen, setIsParticipantFormOpen] = useState(false);
-  const [isDiscussionFormOpen, setIsDiscussionFormOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  const { data: discussions, refetch } = useQuery({
-    queryKey: ['community-discussions', searchQuery],
-    queryFn: async () => {
-      let query = supabase
-        .from('community_discussions')
-        .select(`
-          *,
-          discussion_categories(name),
-          discussion_replies(count)
-        `)
-        .eq('status', 'active')
-        .order('updated_at', { ascending: false });
-
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const { data: categories } = useQuery({
-    queryKey: ['discussion-categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('discussion_categories')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  const { data: participant } = useQuery({
-    queryKey: ['community-participant', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from('community_participants')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
+  // Mock data for community features
+  const discussions = [
+    {
+      id: 1,
+      title: "Best tomato varieties for beginners?",
+      author: "GreenThumb_Sarah",
+      category: "Plant Care",
+      replies: 12,
+      views: 89,
+      timeAgo: "2 hours ago",
+      isHot: true
     },
-    enabled: !!user
-  });
+    {
+      id: 2,
+      title: "Dealing with aphids on my pepper plants",
+      author: "VeggieGardener",
+      category: "Pest Control", 
+      replies: 8,
+      views: 45,
+      timeAgo: "4 hours ago",
+      isHot: false
+    },
+    {
+      id: 3,
+      title: "When to harvest lettuce for best flavor?",
+      author: "FreshSalad",
+      category: "Harvesting",
+      replies: 15,
+      views: 123,
+      timeAgo: "1 day ago",
+      isHot: true
+    }
+  ];
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
+  const communityStats = [
+    { label: "Active Members", value: "2,847", icon: Users },
+    { label: "Discussions", value: "1,234", icon: MessageSquare },
+    { label: "Questions Answered", value: "5,678", icon: TrendingUp }
+  ];
 
-  const handleParticipantSuccess = () => {
-    setIsParticipantFormOpen(false);
-    // Refetch participant data
-  };
-
-  const handleDiscussionSuccess = () => {
-    setIsDiscussionFormOpen(false);
-    refetch();
+  const handleDiscussionSubmit = (data: any) => {
+    console.log("New discussion:", data);
+    setShowForm(false);
+    // Here you would typically submit to your backend
   };
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Community</h2>
-          <p className="text-gray-600">
-            Connect with fellow gardeners, share experiences, and get help
-          </p>
-        </div>
-        
-        {user && (
-          <div className="flex gap-2">
-            {!participant ? (
-              <Dialog open={isParticipantFormOpen} onOpenChange={setIsParticipantFormOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-green-600 hover:bg-green-700 text-white">
-                    <Users className="mr-2 h-4 w-4" />
-                    Join Community
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Join the Community</DialogTitle>
-                  </DialogHeader>
-                  <CommunityParticipantForm onSuccess={handleParticipantSuccess} />
-                </DialogContent>
-              </Dialog>
-            ) : (
-              <Dialog open={isDiscussionFormOpen} onOpenChange={setIsDiscussionFormOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-green-600 hover:bg-green-700 text-white">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Start Discussion
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl">
-                  <DialogHeader>
-                    <DialogTitle>Start a New Discussion</DialogTitle>
-                  </DialogHeader>
-                  <DiscussionForm 
-                    categories={categories || []}
-                    onSuccess={handleDiscussionSuccess}
-                  />
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-        )}
+      {/* Community Stats */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {communityStats.map((stat, index) => (
+          <Card key={index} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                {stat.label}
+              </CardTitle>
+              <stat.icon className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Categories */}
-      {categories && (
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Discussion Categories</h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {categories.map((category) => (
-              <Card key={category.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{category.name}</CardTitle>
-                  <CardDescription className="text-sm">
-                    {category.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Community Tabs */}
+      <Tabs defaultValue="discussions" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="discussions">Discussions</TabsTrigger>
+          <TabsTrigger value="start-discussion">Start Discussion</TabsTrigger>
+        </TabsList>
 
-      {/* Recent Discussions */}
-      <div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Recent Discussions</h3>
-        
-        <div className="space-y-4">
-          {discussions?.map((discussion) => (
-            <Card key={discussion.id} className="hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold text-gray-900 mb-2">
-                      {discussion.title}
-                    </CardTitle>
-                    <CardDescription className="text-gray-600 line-clamp-2">
-                      {discussion.content.substring(0, 200)}...
-                    </CardDescription>
-                  </div>
-                  
-                  {discussion.discussion_categories && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 ml-4">
-                      {discussion.discussion_categories.name}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <User className="h-4 w-4" />
-                      Community Member
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {formatDate(discussion.created_at)}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <MessageSquare className="h-4 w-4" />
-                    {discussion.discussion_replies?.length || 0} replies
-                  </div>
-                </div>
-                
-                <Button variant="ghost" className="w-full mt-4 text-green-600 hover:text-green-700 hover:bg-green-50">
-                  Join Discussion
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {!discussions || discussions.length === 0 && (
-          <div className="text-center py-12">
-            <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No discussions yet</h3>
-            <p className="text-gray-600 mb-4">
-              Be the first to start a conversation in the community!
-            </p>
-            {user && participant && (
-              <Button onClick={() => setIsDiscussionFormOpen(true)} className="bg-green-600 hover:bg-green-700 text-white">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Start First Discussion
+        <TabsContent value="discussions" className="mt-6">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Recent Discussions</h2>
+              <Button 
+                onClick={() => setShowForm(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                New Discussion
               </Button>
-            )}
+            </div>
+
+            <div className="space-y-4">
+              {discussions
+                .filter(discussion => 
+                  !searchQuery || 
+                  discussion.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  discussion.category.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((discussion) => (
+                <Card key={discussion.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-lg hover:text-green-600 transition-colors">
+                            {discussion.title}
+                          </CardTitle>
+                          {discussion.isHot && (
+                            <Badge className="bg-orange-500 text-white">Hot</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <span>by {discussion.author}</span>
+                          <Badge variant="outline">{discussion.category}</Badge>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {discussion.timeAgo}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span>{discussion.replies} replies</span>
+                        <span>{discussion.views} views</span>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        Join Discussion <ArrowRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="start-discussion" className="mt-6">
+          <ScrollableDiscussionForm 
+            onSubmit={handleDiscussionSubmit}
+            isLoading={false}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

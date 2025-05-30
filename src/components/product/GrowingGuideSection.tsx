@@ -18,6 +18,24 @@ const GrowingGuideSection = ({ productId, growthGuide }: GrowingGuideSectionProp
   const queryClient = useQueryClient();
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
 
+  // Fetch guide steps
+  const { data: guideSteps } = useQuery({
+    queryKey: ['guide-steps', growthGuide?.id],
+    queryFn: async () => {
+      if (!growthGuide?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('guide_steps')
+        .select('*')
+        .eq('guide_id', growthGuide.id)
+        .order('step_number');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!growthGuide?.id,
+  });
+
   const { data: userProgress } = useQuery({
     queryKey: ['userProgress', productId, user?.id],
     queryFn: async () => {
@@ -50,7 +68,7 @@ const GrowingGuideSection = ({ productId, growthGuide }: GrowingGuideSectionProp
           guide_id: growthGuide.id,
           user_id: user.id,
           completed_steps: completedSteps,
-          is_completed: completedSteps >= (growthGuide.steps?.length || 0),
+          is_completed: completedSteps >= (guideSteps?.length || 0),
           last_accessed: new Date().toISOString(),
         });
 
@@ -66,8 +84,8 @@ const GrowingGuideSection = ({ productId, growthGuide }: GrowingGuideSectionProp
     updateProgressMutation.mutate({ stepNumber, isCompleted: !isCompleted });
   };
 
-  const progressPercentage = growthGuide?.steps?.length 
-    ? ((userProgress?.completed_steps || 0) / growthGuide.steps.length) * 100 
+  const progressPercentage = guideSteps?.length 
+    ? ((userProgress?.completed_steps || 0) / guideSteps.length) * 100 
     : 0;
 
   if (!growthGuide) {
@@ -92,7 +110,7 @@ const GrowingGuideSection = ({ productId, growthGuide }: GrowingGuideSectionProp
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-gray-700">Your Progress</span>
               <span className="text-sm text-gray-600">
-                {userProgress.completed_steps || 0} of {growthGuide.steps?.length || 0} steps
+                {userProgress.completed_steps || 0} of {guideSteps?.length || 0} steps
               </span>
             </div>
             <Progress value={progressPercentage} className="h-2" />
@@ -101,7 +119,7 @@ const GrowingGuideSection = ({ productId, growthGuide }: GrowingGuideSectionProp
       </div>
 
       <div className="grid gap-6">
-        {growthGuide.steps?.map((step: any, index: number) => {
+        {guideSteps?.map((step: any, index: number) => {
           const isCompleted = user && (userProgress?.completed_steps || 0) >= step.step_number;
           const isExpanded = expandedStep === step.step_number;
           

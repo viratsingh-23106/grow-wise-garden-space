@@ -44,7 +44,6 @@ const GuidesTab = ({ searchQuery }: GuidesTabProps) => {
     enabled: !!user
   });
 
-  // Sample guides data - in real app this would come from the database
   const { data: guides } = useQuery({
     queryKey: ['growth-guides'],
     queryFn: async () => {
@@ -78,26 +77,31 @@ const GuidesTab = ({ searchQuery }: GuidesTabProps) => {
     }
   ];
 
+  // Updated guidance categories with real IDs from database
   const guidanceCategories = [
     {
+      id: "550e8400-e29b-41d4-a716-446655440101",
       title: "Beginner Basics",
       description: "Essential knowledge for new gardeners",
       stepCount: 12,
       image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=500"
     },
     {
+      id: "550e8400-e29b-41d4-a716-446655440102",
       title: "Seasonal Planting",
       description: "When and what to plant throughout the year",
       stepCount: 24,
       image: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=500"
     },
     {
+      id: "550e8400-e29b-41d4-a716-446655440103",
       title: "Pest & Disease Management",
       description: "Identify and treat common garden problems",
       stepCount: 18,
       image: "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=500"
     },
     {
+      id: "550e8400-e29b-41d4-a716-446655440104",
       title: "IoT Integration",
       description: "Setting up and using sensor technology",
       stepCount: 15,
@@ -107,6 +111,12 @@ const GuidesTab = ({ searchQuery }: GuidesTabProps) => {
 
   const handleStartLearning = (guide: any) => {
     navigate(`/guidance/${guide.id}/steps`);
+  };
+
+  const handleStartCategory = (category: any) => {
+    // For now, navigate to a placeholder or the first available guide
+    // You can implement category-specific guides later
+    navigate(`/guidance/${category.id}/steps`);
   };
 
   return (
@@ -244,8 +254,8 @@ const GuidesTab = ({ searchQuery }: GuidesTabProps) => {
               category.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
               category.description.toLowerCase().includes(searchQuery.toLowerCase())
             )
-            .map((category, index) => (
-            <Card key={index} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-0 shadow-lg bg-white/80 backdrop-blur-sm overflow-hidden cursor-pointer">
+            .map((category) => (
+            <Card key={category.id} className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border-0 shadow-lg bg-white/80 backdrop-blur-sm overflow-hidden cursor-pointer">
               <div className="aspect-square overflow-hidden">
                 <img 
                   src={category.image} 
@@ -270,7 +280,10 @@ const GuidesTab = ({ searchQuery }: GuidesTabProps) => {
                   </Badge>
                 </div>
                 
-                <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                <Button 
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => handleStartCategory(category)}
+                >
                   Start Learning <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </CardContent>
