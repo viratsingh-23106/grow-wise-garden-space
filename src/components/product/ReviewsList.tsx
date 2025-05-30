@@ -24,17 +24,32 @@ const ReviewsList = ({ productId }: ReviewsListProps) => {
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['product-reviews', productId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get the reviews
+      const { data: reviewsData, error: reviewsError } = await supabase
         .from('product_reviews')
-        .select(`
-          *,
-          profiles(full_name)
-        `)
+        .select('*')
         .eq('product_id', productId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data as Review[];
+      if (reviewsError) throw reviewsError;
+
+      // Then get the profile data for each review
+      const reviewsWithProfiles = await Promise.all(
+        (reviewsData || []).map(async (review) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', review.user_id)
+            .single();
+
+          return {
+            ...review,
+            profiles: profileData || { full_name: null }
+          };
+        })
+      );
+
+      return reviewsWithProfiles as Review[];
     },
   });
 
