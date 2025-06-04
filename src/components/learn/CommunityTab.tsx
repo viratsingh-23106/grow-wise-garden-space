@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { MessageSquare, Users, TrendingUp, Clock, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ScrollableDiscussionForm from "./ScrollableDiscussionForm";
+import CommunityParticipantDialog from "./CommunityParticipantDialog";
 
 interface CommunityTabProps {
   searchQuery: string;
@@ -13,6 +13,7 @@ interface CommunityTabProps {
 
 const CommunityTab = ({ searchQuery }: CommunityTabProps) => {
   const [showForm, setShowForm] = useState(false);
+  const [showParticipantDialog, setShowParticipantDialog] = useState(false);
 
   // Mock data for community features
   const discussions = [
@@ -60,6 +61,14 @@ const CommunityTab = ({ searchQuery }: CommunityTabProps) => {
     // Here you would typically submit to your backend
   };
 
+  const handleJoinDiscussion = () => {
+    setShowParticipantDialog(true);
+  };
+
+  const handleNewDiscussion = () => {
+    setShowParticipantDialog(true);
+  };
+
   return (
     <div className="space-y-8">
       {/* Community Stats */}
@@ -91,7 +100,7 @@ const CommunityTab = ({ searchQuery }: CommunityTabProps) => {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Recent Discussions</h2>
               <Button 
-                onClick={() => setShowForm(true)}
+                onClick={handleNewDiscussion}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
@@ -137,7 +146,7 @@ const CommunityTab = ({ searchQuery }: CommunityTabProps) => {
                         <span>{discussion.replies} replies</span>
                         <span>{discussion.views} views</span>
                       </div>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={handleJoinDiscussion}>
                         Join Discussion <ArrowRight className="h-3 w-3 ml-1" />
                       </Button>
                     </div>
@@ -155,6 +164,14 @@ const CommunityTab = ({ searchQuery }: CommunityTabProps) => {
           />
         </TabsContent>
       </Tabs>
+
+      <CommunityParticipantDialog
+        open={showParticipantDialog}
+        onOpenChange={setShowParticipantDialog}
+        onSuccess={() => {
+          console.log("Participant joined successfully");
+        }}
+      />
     </div>
   );
 };

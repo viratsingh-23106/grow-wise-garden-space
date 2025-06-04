@@ -190,30 +190,39 @@ export type Database = {
       }
       community_participants: {
         Row: {
+          bio: string | null
           created_at: string
+          email: string | null
           experience_level: string
           id: string
           interests: string[] | null
           location: string | null
           name: string
+          phone: string | null
           user_id: string
         }
         Insert: {
+          bio?: string | null
           created_at?: string
+          email?: string | null
           experience_level: string
           id?: string
           interests?: string[] | null
           location?: string | null
           name: string
+          phone?: string | null
           user_id: string
         }
         Update: {
+          bio?: string | null
           created_at?: string
+          email?: string | null
           experience_level?: string
           id?: string
           interests?: string[] | null
           location?: string | null
           name?: string
+          phone?: string | null
           user_id?: string
         }
         Relationships: []
@@ -603,6 +612,92 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      webinar_registrations: {
+        Row: {
+          attendance_status: string | null
+          id: string
+          participant_email: string
+          participant_name: string
+          participant_phone: string | null
+          registration_date: string
+          user_id: string | null
+          webinar_id: string
+        }
+        Insert: {
+          attendance_status?: string | null
+          id?: string
+          participant_email: string
+          participant_name: string
+          participant_phone?: string | null
+          registration_date?: string
+          user_id?: string | null
+          webinar_id: string
+        }
+        Update: {
+          attendance_status?: string | null
+          id?: string
+          participant_email?: string
+          participant_name?: string
+          participant_phone?: string | null
+          registration_date?: string
+          user_id?: string | null
+          webinar_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webinar_registrations_webinar_id_fkey"
+            columns: ["webinar_id"]
+            isOneToOne: false
+            referencedRelation: "webinars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webinars: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          host_name: string
+          id: string
+          max_participants: number | null
+          recording_url: string | null
+          scheduled_date: string
+          status: string
+          title: string
+          updated_at: string
+          zoom_meeting_link: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          host_name: string
+          id?: string
+          max_participants?: number | null
+          recording_url?: string | null
+          scheduled_date: string
+          status?: string
+          title: string
+          updated_at?: string
+          zoom_meeting_link?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          host_name?: string
+          id?: string
+          max_participants?: number | null
+          recording_url?: string | null
+          scheduled_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          zoom_meeting_link?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

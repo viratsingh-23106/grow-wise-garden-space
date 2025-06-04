@@ -11,6 +11,7 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Dashboard from "./pages/Dashboard";
 import Learn from "./pages/Learn";
+import Webinars from "./pages/Webinars";
 import Auth from "./pages/Auth";
 import Cart from "./pages/Cart";
 import Orders from "./pages/Orders";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/sensor-kit" element={<SensorKit />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/learn" element={<Learn />} />
+              <Route path="/webinars" element={<Webinars />} />
               <Route path="/guidance/:categoryId/steps" element={<GuidanceSteps />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/cart" element={<Cart />} />

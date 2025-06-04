@@ -7,6 +7,7 @@ import NavBar from "@/components/NavBar";
 import GuidesTab from "@/components/learn/GuidesTab";
 import BlogTab from "@/components/learn/BlogTab";
 import CommunityTab from "@/components/learn/CommunityTab";
+import WebinarsTab from "@/components/learn/WebinarsTab";
 
 const Learn = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,10 +41,11 @@ const Learn = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
             <TabsTrigger value="guides">Guides</TabsTrigger>
             <TabsTrigger value="blog">Blog</TabsTrigger>
             <TabsTrigger value="community">Community</TabsTrigger>
+            <TabsTrigger value="webinars">Webinars</TabsTrigger>
           </TabsList>
 
           <TabsContent value="guides" className="mt-0">
@@ -56,6 +58,10 @@ const Learn = () => {
 
           <TabsContent value="community" className="mt-0">
             <CommunityTab searchQuery={searchQuery} />
+          </TabsContent>
+
+          <TabsContent value="webinars" className="mt-0">
+            <WebinarsTab searchQuery={searchQuery} />
           </TabsContent>
         </Tabs>
       </div>
