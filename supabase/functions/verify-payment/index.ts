@@ -40,14 +40,22 @@ serve(async (req) => {
       .digest("hex");
 
     if (expectedSignature !== signature) {
+      console.error("Signature verification failed:", {
+        expected: expectedSignature,
+        received: signature,
+        orderId,
+        paymentId
+      });
       throw new Error("Invalid payment signature");
     }
+
+    console.log("Payment signature verified successfully for user:", user.email);
 
     // Update subscription status
     const subscriptionEnd = new Date();
     subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
 
-    await supabaseClient.from("subscribers").upsert({
+    const { error: upsertError } = await supabaseClient.from("subscribers").upsert({
       email: user.email,
       user_id: user.id,
       subscribed: true,
@@ -55,6 +63,13 @@ serve(async (req) => {
       subscription_end: subscriptionEnd.toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'email' });
+
+    if (upsertError) {
+      console.error("Error updating subscription:", upsertError);
+      throw new Error("Failed to update subscription status");
+    }
+
+    console.log("Subscription activated successfully for user:", user.email);
 
     return new Response(JSON.stringify({ 
       success: true,
