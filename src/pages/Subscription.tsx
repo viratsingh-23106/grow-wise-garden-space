@@ -1,172 +1,162 @@
 
 import { useState } from "react";
-import { Check, Zap, Shield, BarChart3, Smartphone, Cloud, Bell, Settings } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { Check, Crown, Zap, Shield, Users, Star, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import NavBar from "@/components/NavBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-// Add Razorpay script to document head
-const loadRazorpayScript = () => {
-  return new Promise((resolve) => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
+import NavBar from "@/components/NavBar";
+import { toast } from "@/hooks/use-toast";
 
 const Subscription = () => {
   const { user } = useAuth();
-  const { isSubscribed, subscriptionTier, trialEnded, loading, checkSubscription } = useSubscription();
-  const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { isSubscribed, subscriptionTier, loading: subscriptionLoading } = useSubscription();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
-  const plans = [
-    {
-      name: "Free Trial",
-      price: "₹0",
-      duration: "2 days",
-      description: "Try our IoT sensor dashboard with mock data",
-      features: [
-        "2-day trial access",
-        "Mock sensor data viewing",
-        "Basic dashboard features",
-        "Limited alerts",
-      ],
-      limitations: [
-        "No real sensor connectivity",
-        "No data export",
-        "No automation rules",
-      ],
-      current: !isSubscribed && !trialEnded,
-      buttonText: trialEnded ? "Trial Expired" : "Current Plan",
-      buttonDisabled: true,
-    },
-    {
-      name: "Premium",
-      price: "₹999",
-      duration: "month",
-      description: "Full access to IoT sensor management and advanced features",
-      features: [
-        "Unlimited sensor connections",
-        "Real-time data monitoring",
-        "Advanced analytics & charts",
-        "Smart notifications & alerts",
-        "Data export & reporting",
-        "Automation rules setup",
-        "Mobile app access",
-        "Cloud data storage",
-        "24/7 technical support",
-        "API access for integrations",
-      ],
-      popular: true,
-      current: isSubscribed,
-      buttonText: isSubscribed ? "Current Plan" : "Subscribe Now",
-      buttonDisabled: isSubscribed,
-    },
-  ];
-
-  const handleSubscribe = async () => {
+  const handleSubscription = async (planType: 'premium' | 'enterprise') => {
     if (!user) {
       toast({
         title: "Authentication Required",
-        description: "Please sign in to subscribe.",
+        description: "Please sign in to subscribe",
         variant: "destructive",
       });
+      navigate('/auth');
       return;
     }
 
-    setIsProcessing(true);
-    try {
-      // Load Razorpay script
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        throw new Error("Failed to load Razorpay script");
-      }
+    setLoading(true);
+    console.log(`Starting ${planType} subscription process for user:`, user.email);
 
-      // Create order
+    try {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
+        body: { planType }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        toast({
+          title: "Error",
+          description: `Failed to start subscription process: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
 
+      if (!data || !data.orderId) {
+        console.error('Invalid response from create-checkout:', data);
+        toast({
+          title: "Error", 
+          description: "Invalid response from payment service",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Razorpay order created:', data);
+
+      // Initialize Razorpay checkout
       const options = {
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
-        name: "IoT Sensor Dashboard",
-        description: "Premium Plan Subscription",
+        name: "AeroFarm Pro",
+        description: `${planType === 'premium' ? 'Premium' : 'Enterprise'} Plan Subscription`,
         order_id: data.orderId,
         handler: async function (response: any) {
+          console.log('Payment successful, verifying...', response);
           try {
-            // Verify payment
-            const { error: verifyError } = await supabase.functions.invoke('verify-payment', {
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
               body: {
                 paymentId: response.razorpay_payment_id,
                 orderId: response.razorpay_order_id,
-                signature: response.razorpay_signature,
-              },
-              headers: {
-                Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-              },
+                signature: response.razorpay_signature
+              }
             });
 
-            if (verifyError) throw verifyError;
+            if (verifyError) {
+              console.error('Payment verification error:', verifyError);
+              toast({
+                title: "Payment Verification Failed",
+                description: verifyError.message,
+                variant: "destructive",
+              });
+              return;
+            }
 
+            console.log('Payment verified successfully:', verifyData);
             toast({
-              title: "Success!",
-              description: "Payment successful. Your subscription is now active!",
+              title: "Subscription Activated!",
+              description: "Your subscription has been activated successfully.",
             });
-
-            // Refresh subscription status
-            await checkSubscription();
+            
+            // Refresh the page to update subscription status
+            window.location.reload();
           } catch (error) {
-            console.error('Payment verification error:', error);
+            console.error('Error verifying payment:', error);
             toast({
-              title: "Error",
-              description: "Payment verification failed. Please contact support.",
+              title: "Payment Verification Failed",
+              description: "Please contact support if payment was deducted.",
               variant: "destructive",
             });
           }
         },
         prefill: {
-          name: user.user_metadata?.full_name || "",
+          name: user.email,
           email: user.email,
         },
         theme: {
-          color: "#16a34a",
+          color: "#16a34a"
         },
+        modal: {
+          ondismiss: function() {
+            console.log('Payment dialog closed');
+            setLoading(false);
+          }
+        }
       };
 
-      const razorpay = new (window as any).Razorpay(options);
-      razorpay.open();
-    } catch (error) {
-      console.error('Error creating order:', error);
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+
+    } catch (error: any) {
+      console.error('Error in handleSubscription:', error);
       toast({
         title: "Error",
-        description: "Failed to start subscription process. Please try again.",
+        description: `Failed to start subscription: ${error.message}`,
         variant: "destructive",
       });
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
   };
 
-  if (loading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
         <NavBar />
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <div className="max-w-4xl mx-auto px-4 py-16">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Please Sign In</h2>
+            <p className="text-gray-600 mb-8">You need to be signed in to view subscription plans</p>
+            <Button onClick={() => navigate('/auth')} className="bg-green-600 hover:bg-green-700">
+              Sign In
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (subscriptionLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+        <NavBar />
+        <div className="max-w-4xl mx-auto px-4 py-16">
+          <div className="text-center">Loading subscription status...</div>
         </div>
       </div>
     );
@@ -176,186 +166,167 @@ const Subscription = () => {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       <NavBar />
       
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
+      {/* Razorpay Script */}
+      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+      
+      <div className="max-w-7xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            IoT Sensor Dashboard Plans
+            Choose Your Plan
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Choose the perfect plan for your smart gardening needs. Start with our free trial 
-            or unlock the full potential with our premium subscription.
+            Unlock advanced features and take your farming to the next level with our premium plans
           </p>
         </div>
 
-        {/* Current Status */}
-        {user && (
-          <div className="mb-8 text-center">
-            <Card className="max-w-md mx-auto bg-white/80 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Badge variant={isSubscribed ? "default" : trialEnded ? "destructive" : "secondary"}>
-                    {isSubscribed ? "Premium Active" : trialEnded ? "Trial Expired" : "Free Trial"}
-                  </Badge>
+        {isSubscribed && (
+          <div className="mb-8">
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <span className="font-medium text-green-800">
+                    You have an active {subscriptionTier} subscription
+                  </span>
                 </div>
-                <p className="text-sm text-gray-600">
-                  {isSubscribed 
-                    ? "You have full access to all features"
-                    : trialEnded 
-                    ? "Subscribe to continue using the dashboard"
-                    : "Your trial is active - upgrade anytime!"
-                  }
-                </p>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Pricing Plans */}
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {plans.map((plan) => (
-            <Card 
-              key={plan.name} 
-              className={`relative bg-white/80 backdrop-blur-sm border-2 transition-all hover:shadow-lg ${
-                plan.popular 
-                  ? 'border-green-500 shadow-lg' 
-                  : plan.current 
-                  ? 'border-blue-500' 
-                  : 'border-gray-200'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-green-600 text-white px-4 py-1">
-                    <Zap className="h-3 w-3 mr-1" />
-                    Most Popular
-                  </Badge>
+          {/* Premium Plan */}
+          <Card className="relative border-2 border-green-500 shadow-lg">
+            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+              <Badge className="bg-green-600 text-white px-4 py-1">
+                <Star className="w-4 h-4 mr-1" />
+                Most Popular
+              </Badge>
+            </div>
+            
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-4 p-3 bg-green-100 rounded-full w-fit">
+                <Crown className="h-8 w-8 text-green-600" />
+              </div>
+              <CardTitle className="text-2xl font-bold">Premium Plan</CardTitle>
+              <div className="text-3xl font-bold text-green-600">₹999<span className="text-lg text-gray-500">/month</span></div>
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Advanced Analytics Dashboard</span>
                 </div>
-              )}
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Real-time Monitoring & Alerts</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>AI-Powered Crop Recommendations</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Weather Integration</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Priority Customer Support</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Up to 10 Sensor Connections</span>
+                </div>
+              </div>
               
-              {plan.current && (
-                <div className="absolute -top-3 right-4">
-                  <Badge variant="secondary">Current Plan</Badge>
-                </div>
-              )}
-
-              <CardHeader className="text-center pb-4">
-                <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
-                <div className="text-3xl font-bold text-green-600">
-                  {plan.price}
-                  <span className="text-base font-normal text-gray-600">/{plan.duration}</span>
-                </div>
-                <CardDescription className="text-lg">{plan.description}</CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-600" />
-                    Features Included:
-                  </h4>
-                  <ul className="space-y-2">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                        <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {plan.limitations && (
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-3 text-sm">Limitations:</h4>
-                    <ul className="space-y-1">
-                      {plan.limitations.map((limitation, index) => (
-                        <li key={index} className="text-xs text-gray-500 flex items-start gap-2">
-                          <span className="text-red-400">×</span>
-                          {limitation}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              <Button 
+                className="w-full bg-green-600 hover:bg-green-700" 
+                size="lg"
+                onClick={() => handleSubscription('premium')}
+                disabled={loading || (isSubscribed && subscriptionTier === 'Premium')}
+              >
+                {loading ? (
+                  "Processing..."
+                ) : isSubscribed && subscriptionTier === 'Premium' ? (
+                  "Current Plan"
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Get Premium
+                  </>
                 )}
+              </Button>
+            </CardContent>
+          </Card>
 
-                <Button
-                  className={`w-full h-12 text-base font-semibold ${
-                    plan.popular 
-                      ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg' 
-                      : 'bg-gray-600 hover:bg-gray-700 text-white'
-                  }`}
-                  disabled={plan.buttonDisabled || isProcessing}
-                  onClick={plan.name === "Premium" && !isSubscribed ? handleSubscribe : undefined}
-                >
-                  {isProcessing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    plan.buttonText
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+          {/* Enterprise Plan */}
+          <Card className="border-2 border-gray-200 shadow-lg">            
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-4 p-3 bg-purple-100 rounded-full w-fit">
+                <Shield className="h-8 w-8 text-purple-600" />
+              </div>
+              <CardTitle className="text-2xl font-bold">Enterprise Plan</CardTitle>
+              <div className="text-3xl font-bold text-purple-600">₹2999<span className="text-lg text-gray-500">/month</span></div>
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Everything in Premium</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Unlimited Sensor Connections</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Advanced API Access</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Custom Integrations</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>Dedicated Account Manager</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <span>24/7 Phone Support</span>
+                </div>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                className="w-full border-purple-600 text-purple-600 hover:bg-purple-50" 
+                size="lg"
+                onClick={() => handleSubscription('enterprise')}
+                disabled={loading || (isSubscribed && subscriptionTier === 'Enterprise')}
+              >
+                {loading ? (
+                  "Processing..."
+                ) : isSubscribed && subscriptionTier === 'Enterprise' ? (
+                  "Current Plan"
+                ) : (
+                  <>
+                    <Users className="w-4 h-4 mr-2" />
+                    Get Enterprise
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Feature Comparison */}
-        <div className="mt-16">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-8">
-            Why Choose Premium?
-          </h2>
-          
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <Card className="bg-white/80 backdrop-blur-sm">
-              <CardContent className="pt-6 text-center">
-                <BarChart3 className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Real-Time Analytics</h3>
-                <p className="text-sm text-gray-600">
-                  Get live data from your actual sensors with advanced charts and insights
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/80 backdrop-blur-sm">
-              <CardContent className="pt-6 text-center">
-                <Smartphone className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Mobile Access</h3>
-                <p className="text-sm text-gray-600">
-                  Monitor your garden from anywhere with full mobile app integration
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/80 backdrop-blur-sm">
-              <CardContent className="pt-6 text-center">
-                <Bell className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Smart Alerts</h3>
-                <p className="text-sm text-gray-600">
-                  Receive intelligent notifications when your plants need attention
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Security & Support */}
-        <div className="mt-12 text-center">
-          <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              <span>Secure Payments via Razorpay</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Cloud className="h-4 w-4" />
-              <span>Cloud Storage</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              <span>24/7 Support</span>
-            </div>
-          </div>
+        <div className="text-center mt-12">
+          <p className="text-gray-600 mb-4">
+            All plans include a 30-day money-back guarantee
+          </p>
+          <p className="text-sm text-gray-500">
+            Secure payments powered by Razorpay • Cancel anytime
+          </p>
         </div>
       </div>
     </div>

@@ -7,10 +7,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Separator } from "@/components/ui/separator";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import NavBar from "@/components/NavBar";
 
 const Cart = () => {
-  const { items, loading, updateQuantity, removeFromCart, getTotalPrice } = useCart();
+  const { items, loading, updateQuantity, removeFromCart, getTotalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [checkingOut, setCheckingOut] = useState(false);
@@ -62,18 +64,165 @@ const Cart = () => {
     );
   }
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to checkout",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
     setCheckingOut(true);
-    // In a real implementation, this is where we would integrate with Stripe
-    setTimeout(() => {
+    console.log('Starting checkout process for user:', user.email);
+
+    try {
+      const totalAmount = Math.round(getTotalPrice() * 1.07 * 100); // Convert to paisa and include tax
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { 
+          planType: 'cart_checkout',
+          amount: totalAmount,
+          items: items.map(item => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.product.price
+          }))
+        }
+      });
+
+      if (error) {
+        console.error('Checkout error:', error);
+        toast({
+          title: "Checkout Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data || !data.orderId) {
+        console.error('Invalid checkout response:', data);
+        toast({
+          title: "Checkout Failed",
+          description: "Invalid response from payment service",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Razorpay order created for cart:', data);
+
+      // Initialize Razorpay checkout
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: "AeroFarm Pro",
+        description: "Cart Checkout",
+        order_id: data.orderId,
+        handler: async function (response: any) {
+          console.log('Payment successful for cart, processing order...', response);
+          try {
+            // Create order in database
+            const { data: orderData, error: orderError } = await supabase
+              .from('orders')
+              .insert({
+                user_id: user.id,
+                total_amount: totalAmount / 100, // Convert back to rupees
+                status: 'completed'
+              })
+              .select()
+              .single();
+
+            if (orderError) {
+              console.error('Error creating order:', orderError);
+              toast({
+                title: "Order Creation Failed",
+                description: "Payment successful but order creation failed. Please contact support.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            // Create order items
+            const orderItems = items.map(item => ({
+              order_id: orderData.id,
+              product_id: item.product_id,
+              quantity: item.quantity,
+              price: item.product.price
+            }));
+
+            const { error: itemsError } = await supabase
+              .from('order_items')
+              .insert(orderItems);
+
+            if (itemsError) {
+              console.error('Error creating order items:', itemsError);
+              toast({
+                title: "Order Items Error",
+                description: "Order created but items not saved. Please contact support.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            // Clear cart after successful order
+            await clearCart();
+
+            toast({
+              title: "Order Placed Successfully!",
+              description: "Your order has been placed and payment processed.",
+            });
+
+            navigate('/orders');
+          } catch (error) {
+            console.error('Error processing order:', error);
+            toast({
+              title: "Order Processing Failed",
+              description: "Payment successful but order processing failed. Please contact support.",
+              variant: "destructive",
+            });
+          }
+        },
+        prefill: {
+          name: user.email,
+          email: user.email,
+        },
+        theme: {
+          color: "#16a34a"
+        },
+        modal: {
+          ondismiss: function() {
+            console.log('Payment dialog closed');
+            setCheckingOut(false);
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+
+    } catch (error: any) {
+      console.error('Error in handleCheckout:', error);
+      toast({
+        title: "Checkout Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
       setCheckingOut(false);
-      navigate('/dashboard');
-    }, 2000);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       <NavBar />
+      
+      {/* Razorpay Script */}
+      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       
       <div className="max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>

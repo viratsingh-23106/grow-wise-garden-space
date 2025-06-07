@@ -31,19 +31,41 @@ serve(async (req) => {
       throw new Error("Razorpay credentials not configured");
     }
 
+    const { planType, amount, items } = await req.json();
+    console.log("Processing checkout for:", { planType, amount, userEmail: user.email });
+
+    let orderAmount: number;
+    let receiptId: string;
+    let description: string;
+
+    if (planType === 'cart_checkout') {
+      orderAmount = amount; // Amount already in paisa from frontend
+      receiptId = `cart_${user.id}_${Date.now()}`;
+      description = "Cart Checkout";
+      console.log("Cart checkout - items:", items?.length || 0, "amount:", orderAmount);
+    } else {
+      // Subscription checkout
+      orderAmount = planType === 'premium' ? 99900 : 299900; // ₹999 or ₹2999 in paisa
+      receiptId = `subscription_${user.id}_${Date.now()}`;
+      description = `${planType === 'premium' ? 'Premium' : 'Enterprise'} Plan Subscription`;
+      console.log("Subscription checkout:", planType, "amount:", orderAmount);
+    }
+
     // Create Razorpay order
     const orderData = {
-      amount: 99900, // ₹999 in paisa
+      amount: orderAmount,
       currency: "INR",
-      receipt: `subscription_${user.id}_${Date.now()}`,
+      receipt: receiptId,
       notes: {
         user_id: user.id,
         email: user.email,
-        plan: "Premium Plan"
+        plan_type: planType,
+        description: description
       }
     };
 
     const auth = btoa(`${razorpayKeyId}:${razorpayKeySecret}`);
+    console.log("Creating Razorpay order with auth length:", auth.length);
     
     const response = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
