@@ -10,9 +10,20 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// Add Razorpay script to document head
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 const Subscription = () => {
   const { user } = useAuth();
-  const { isSubscribed, subscriptionTier, trialEnded, loading } = useSubscription();
+  const { isSubscribed, subscriptionTier, trialEnded, loading, checkSubscription } = useSubscription();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -73,6 +84,13 @@ const Subscription = () => {
 
     setIsProcessing(true);
     try {
+      // Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error("Failed to load Razorpay script");
+      }
+
+      // Create order
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
           Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
@@ -81,42 +99,61 @@ const Subscription = () => {
 
       if (error) throw error;
 
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
+      const options = {
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        name: "IoT Sensor Dashboard",
+        description: "Premium Plan Subscription",
+        order_id: data.orderId,
+        handler: async function (response: any) {
+          try {
+            // Verify payment
+            const { error: verifyError } = await supabase.functions.invoke('verify-payment', {
+              body: {
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id,
+                signature: response.razorpay_signature,
+              },
+              headers: {
+                Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+              },
+            });
+
+            if (verifyError) throw verifyError;
+
+            toast({
+              title: "Success!",
+              description: "Payment successful. Your subscription is now active!",
+            });
+
+            // Refresh subscription status
+            await checkSubscription();
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            toast({
+              title: "Error",
+              description: "Payment verification failed. Please contact support.",
+              variant: "destructive",
+            });
+          }
+        },
+        prefill: {
+          name: user.user_metadata?.full_name || "",
+          email: user.email,
+        },
+        theme: {
+          color: "#16a34a",
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+      razorpay.open();
     } catch (error) {
-      console.error('Error creating checkout:', error);
+      console.error('Error creating order:', error);
       toast({
         title: "Error",
         description: "Failed to start subscription process. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleManageSubscription = async () => {
-    if (!user) return;
-
-    setIsProcessing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('customer-portal', {
-        headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
-    } catch (error) {
-      console.error('Error opening customer portal:', error);
-      toast({
-        title: "Error",
-        description: "Failed to open subscription management. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -169,18 +206,6 @@ const Subscription = () => {
                     : "Your trial is active - upgrade anytime!"
                   }
                 </p>
-                {isSubscribed && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleManageSubscription}
-                    disabled={isProcessing}
-                    className="mt-3"
-                  >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Manage Subscription
-                  </Button>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -320,7 +345,7 @@ const Subscription = () => {
           <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
-              <span>Secure Payments</span>
+              <span>Secure Payments via Razorpay</span>
             </div>
             <div className="flex items-center gap-2">
               <Cloud className="h-4 w-4" />
