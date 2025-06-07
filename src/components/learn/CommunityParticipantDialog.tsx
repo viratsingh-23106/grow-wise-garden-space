@@ -84,10 +84,10 @@ const CommunityParticipantDialog = ({ open, onOpenChange, onSuccess }: Community
         description: "Your details have been saved. Redirecting to WhatsApp...",
       });
 
-      // Redirect to your WhatsApp number
+      // Redirect to the correct WhatsApp number: 8090193598
       setTimeout(() => {
         const whatsappMessage = encodeURIComponent(`Hi! I'm ${formData.name} and I'd like to join the gardening community discussion. I'm a ${formData.experience_level} level gardener from ${formData.location}.`);
-        window.open(`https://wa.me/+917015863432?text=${whatsappMessage}`, '_blank');
+        window.open(`https://wa.me/+918090193598?text=${whatsappMessage}`, '_blank');
         onSuccess();
         onOpenChange(false);
       }, 2000);

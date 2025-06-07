@@ -575,6 +575,92 @@ export type Database = {
         }
         Relationships: []
       }
+      sensor_data: {
+        Row: {
+          humidity: number | null
+          id: string
+          light_level: number | null
+          nutrients: number | null
+          ph_level: number | null
+          recorded_at: string
+          sensor_id: string | null
+          soil_moisture: number | null
+          temperature: number | null
+          user_id: string | null
+        }
+        Insert: {
+          humidity?: number | null
+          id?: string
+          light_level?: number | null
+          nutrients?: number | null
+          ph_level?: number | null
+          recorded_at?: string
+          sensor_id?: string | null
+          soil_moisture?: number | null
+          temperature?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          humidity?: number | null
+          id?: string
+          light_level?: number | null
+          nutrients?: number | null
+          ph_level?: number | null
+          recorded_at?: string
+          sensor_id?: string | null
+          soil_moisture?: number | null
+          temperature?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sensor_data_sensor_id_fkey"
+            columns: ["sensor_id"]
+            isOneToOne: false
+            referencedRelation: "user_sensors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          stripe_customer_id: string | null
+          subscribed: boolean
+          subscription_end: string | null
+          subscription_tier: string | null
+          trial_end: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscribed?: boolean
+          subscription_end?: string | null
+          subscription_tier?: string | null
+          trial_end?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscribed?: boolean
+          subscription_end?: string | null
+          subscription_tier?: string | null
+          trial_end?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_progress: {
         Row: {
           completed_steps: number | null
@@ -612,6 +698,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_sensors: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          id: string
+          location: string | null
+          sensor_name: string
+          sensor_type: string
+          status: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          location?: string | null
+          sensor_name: string
+          sensor_type: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          location?: string | null
+          sensor_name?: string
+          sensor_type?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       webinar_registrations: {
         Row: {
