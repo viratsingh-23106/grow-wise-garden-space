@@ -38,18 +38,24 @@ serve(async (req) => {
     let receiptId: string;
     let description: string;
 
+    // Generate shorter receipt IDs (max 40 chars for Razorpay)
+    const timestamp = Date.now().toString();
+    const userIdShort = user.id.substring(0, 8); // First 8 chars of UUID
+
     if (planType === 'cart_checkout') {
       orderAmount = amount; // Amount already in paisa from frontend
-      receiptId = `cart_${user.id}_${Date.now()}`;
+      receiptId = `cart_${userIdShort}_${timestamp}`.substring(0, 40);
       description = "Cart Checkout";
       console.log("Cart checkout - items:", items?.length || 0, "amount:", orderAmount);
     } else {
       // Subscription checkout
       orderAmount = planType === 'premium' ? 99900 : 299900; // ₹999 or ₹2999 in paisa
-      receiptId = `subscription_${user.id}_${Date.now()}`;
+      receiptId = `sub_${planType}_${userIdShort}_${timestamp}`.substring(0, 40);
       description = `${planType === 'premium' ? 'Premium' : 'Enterprise'} Plan Subscription`;
       console.log("Subscription checkout:", planType, "amount:", orderAmount);
     }
+
+    console.log("Generated receipt ID:", receiptId, "length:", receiptId.length);
 
     // Create Razorpay order
     const orderData = {

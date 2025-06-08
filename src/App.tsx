@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +19,7 @@ import SensorKit from "./pages/SensorKit";
 import Subscription from "./pages/Subscription";
 import GuidanceSteps from "./components/learn/GuidanceSteps";
 import NotFound from "./pages/NotFound";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +41,7 @@ const App = () => (
                 <Route path="/learn" element={<Learn />} />
                 <Route path="/webinars" element={<Webinars />} />
                 <Route path="/subscription" element={<Subscription />} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="/guidance/:categoryId/steps" element={<GuidanceSteps />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/cart" element={<Cart />} />
