@@ -28,6 +28,16 @@ const Subscription = () => {
       return;
     }
 
+    // Check if Razorpay is loaded
+    if (typeof (window as any).Razorpay === 'undefined') {
+      toast({
+        title: "Payment Gateway Error",
+        description: "Payment gateway is not loaded. Please refresh the page and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     console.log(`Starting ${planType} subscription process for user:`, user.email);
 
@@ -165,9 +175,6 @@ const Subscription = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       <NavBar />
-      
-      {/* Razorpay Script */}
-      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       
       <div className="max-w-7xl mx-auto px-4 py-16">
         <div className="text-center mb-12">

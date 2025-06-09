@@ -75,6 +75,16 @@ const Cart = () => {
       return;
     }
 
+    // Check if Razorpay is loaded
+    if (typeof (window as any).Razorpay === 'undefined') {
+      toast({
+        title: "Payment Gateway Error",
+        description: "Payment gateway is not loaded. Please refresh the page and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setCheckingOut(true);
     console.log('Starting checkout process for user:', user.email);
 
@@ -220,9 +230,6 @@ const Cart = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       <NavBar />
-      
-      {/* Razorpay Script */}
-      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       
       <div className="max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
