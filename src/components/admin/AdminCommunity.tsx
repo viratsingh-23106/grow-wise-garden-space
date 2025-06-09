@@ -57,7 +57,7 @@ const AdminCommunity = () => {
 
           return {
             ...discussion,
-            author_email: authUsers.users.find(u => u.id === discussion.author_id)?.email || 'N/A',
+            author_email: authUsers?.users.find(u => u.id === discussion.author_id)?.email || 'N/A',
             replies_count: count || 0
           };
         })

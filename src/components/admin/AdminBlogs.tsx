@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Check, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -49,7 +49,7 @@ const AdminBlogs = () => {
 
       const blogsWithAuthors = blogsData?.map(blog => ({
         ...blog,
-        author_email: authUsers.users.find(u => u.id === blog.author_id)?.email || 'N/A'
+        author_email: authUsers?.users.find(u => u.id === blog.author_id)?.email || 'N/A'
       })) || [];
 
       setBlogs(blogsWithAuthors);

@@ -57,7 +57,7 @@ const AdminUsers = () => {
 
       // Combine all data
       const combinedUsers = profiles?.map(profile => {
-        const authUser = authUsers.users.find(u => u.id === profile.id);
+        const authUser = authUsers?.users.find(u => u.id === profile.id);
         const subscription = subscribers?.find(s => s.user_id === profile.id);
         const userRole = roles?.find(r => r.user_id === profile.id);
 
