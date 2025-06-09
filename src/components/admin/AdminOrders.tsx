@@ -8,6 +8,15 @@ import { Package, Truck, CheckCircle, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
+interface OrderItem {
+  product_id: string;
+  quantity: number;
+  price: number;
+  product: {
+    name: string;
+  };
+}
+
 interface Order {
   id: string;
   user_id: string;
@@ -15,14 +24,7 @@ interface Order {
   status: string;
   created_at: string;
   user_email?: string;
-  items: Array<{
-    product_id: string;
-    quantity: number;
-    price: number;
-    product: {
-      name: string;
-    };
-  }>;
+  items: OrderItem[];
 }
 
 const AdminOrders = () => {
@@ -72,7 +74,14 @@ const AdminOrders = () => {
 
       const ordersWithEmails = ordersData?.map(order => ({
         ...order,
-        items: order.order_items,
+        items: order.order_items?.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.price,
+          product: {
+            name: item.products?.name || 'Unknown Product'
+          }
+        })) || [],
         user_email: authUsers.users.find(u => u.id === order.user_id)?.email || 'N/A'
       })) || [];
 
