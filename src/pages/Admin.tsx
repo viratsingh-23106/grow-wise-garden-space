@@ -17,25 +17,43 @@ import AdminWebinars from "@/components/admin/AdminWebinars";
 import AdminCommunity from "@/components/admin/AdminCommunity";
 
 const Admin = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   useEffect(() => {
     const checkAdminRole = async () => {
+      console.log('Checking admin role for user:', user?.email);
+      
+      if (authLoading) {
+        console.log('Auth still loading, waiting...');
+        return;
+      }
+
       if (!user) {
+        console.log('No user found, redirecting to auth');
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to access the admin panel",
+          variant: "destructive",
+        });
         navigate('/auth');
         return;
       }
 
+      setCheckingAdmin(true);
       try {
+        console.log('Querying user_roles for user:', user.id);
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
           .eq('role', 'admin')
           .maybeSingle();
+
+        console.log('Admin check result:', { data, error });
 
         if (error) {
           console.error('Error checking admin role:', error);
@@ -49,6 +67,7 @@ const Admin = () => {
         }
 
         if (!data) {
+          console.log('User is not admin, redirecting to home');
           toast({
             title: "Access Denied",
             description: "You don't have admin privileges",
@@ -58,24 +77,37 @@ const Admin = () => {
           return;
         }
 
+        console.log('User is admin, granting access');
         setIsAdmin(true);
+        toast({
+          title: "Welcome Admin",
+          description: "Admin access granted successfully",
+        });
       } catch (error) {
         console.error('Error in admin check:', error);
+        toast({
+          title: "Error",
+          description: "An error occurred while checking admin access",
+          variant: "destructive",
+        });
         navigate('/');
       } finally {
         setLoading(false);
+        setCheckingAdmin(false);
       }
     };
 
     checkAdminRole();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
-  if (loading) {
+  if (authLoading || loading || checkingAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
         <NavBar />
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center">Loading admin panel...</div>
+          <div className="text-center">
+            <div className="text-lg">Checking admin access...</div>
+          </div>
         </div>
       </div>
     );

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, CreditCard } from "lucide-react";
@@ -136,13 +135,13 @@ const Cart = () => {
         handler: async function (response: any) {
           console.log('Payment successful for cart, processing order...', response);
           try {
-            // Create order in database
+            // Create order in database with correct status
             const { data: orderData, error: orderError } = await supabase
               .from('orders')
               .insert({
                 user_id: user.id,
                 total_amount: totalAmount / 100, // Convert back to rupees
-                status: 'completed'
+                status: 'pending' // Use 'pending' instead of 'completed'
               })
               .select()
               .single();
