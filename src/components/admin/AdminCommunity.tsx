@@ -46,7 +46,8 @@ const AdminCommunity = () => {
       if (error) throw error;
 
       // Get author emails and reply counts
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const { data: authUsersResponse } = await supabase.auth.admin.listUsers();
+      const authUsers = authUsersResponse?.users || [];
 
       const discussionsWithDetails = await Promise.all(
         (discussionsData || []).map(async (discussion) => {
@@ -57,7 +58,7 @@ const AdminCommunity = () => {
 
           return {
             ...discussion,
-            author_email: authUsers?.users.find(u => u.id === discussion.author_id)?.email || 'N/A',
+            author_email: authUsers.find((u: any) => u.id === discussion.author_id)?.email || 'N/A',
             replies_count: count || 0
           };
         })

@@ -45,11 +45,12 @@ const AdminBlogs = () => {
       if (error) throw error;
 
       // Get author emails
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const { data: authUsersResponse } = await supabase.auth.admin.listUsers();
+      const authUsers = authUsersResponse?.users || [];
 
       const blogsWithAuthors = blogsData?.map(blog => ({
         ...blog,
-        author_email: authUsers?.users.find(u => u.id === blog.author_id)?.email || 'N/A'
+        author_email: authUsers.find((u: any) => u.id === blog.author_id)?.email || 'N/A'
       })) || [];
 
       setBlogs(blogsWithAuthors);

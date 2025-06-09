@@ -53,11 +53,12 @@ const AdminUsers = () => {
         .select('user_id, role');
 
       // Get auth users for email
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const { data: authUsersResponse } = await supabase.auth.admin.listUsers();
+      const authUsers = authUsersResponse?.users || [];
 
       // Combine all data
       const combinedUsers = profiles?.map(profile => {
-        const authUser = authUsers?.users.find(u => u.id === profile.id);
+        const authUser = authUsers.find((u: any) => u.id === profile.id);
         const subscription = subscribers?.find(s => s.user_id === profile.id);
         const userRole = roles?.find(r => r.user_id === profile.id);
 

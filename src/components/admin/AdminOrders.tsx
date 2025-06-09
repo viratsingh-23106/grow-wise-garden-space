@@ -70,7 +70,8 @@ const AdminOrders = () => {
       if (ordersError) throw ordersError;
 
       // Get user emails
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const { data: authUsersResponse } = await supabase.auth.admin.listUsers();
+      const authUsers = authUsersResponse?.users || [];
 
       const ordersWithEmails = ordersData?.map(order => ({
         ...order,
@@ -82,7 +83,7 @@ const AdminOrders = () => {
             name: item.products?.name || 'Unknown Product'
           }
         })) || [],
-        user_email: authUsers.users.find(u => u.id === order.user_id)?.email || 'N/A'
+        user_email: authUsers.find((u: any) => u.id === order.user_id)?.email || 'N/A'
       })) || [];
 
       setOrders(ordersWithEmails);
