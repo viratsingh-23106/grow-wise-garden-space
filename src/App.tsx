@@ -15,6 +15,7 @@ import Learn from "./pages/Learn";
 import Auth from "./pages/Auth";
 import Cart from "./pages/Cart";
 import Orders from "./pages/Orders";
+import Profile from "./pages/Profile";
 import SensorKit from "./pages/SensorKit";
 import GuidanceSteps from "./components/learn/GuidanceSteps";
 import NotFound from "./pages/NotFound";
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/profile" element={<Profile />} />
                 {/* Legacy redirects for old routes */}
                 <Route path="/guidance" element={<Learn />} />
                 <Route path="/blog" element={<Learn />} />

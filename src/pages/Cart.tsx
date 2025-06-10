@@ -134,7 +134,7 @@ const Cart = () => {
         handler: async function (response: any) {
           console.log('Payment successful for cart, processing order...', response);
           try {
-            // Create order in database
+            // First create the order
             const { data: orderData, error: orderError } = await supabase
               .from('orders')
               .insert({
@@ -147,41 +147,29 @@ const Cart = () => {
 
             if (orderError) {
               console.error('Error creating order:', orderError);
-              toast({
-                title: "Order Creation Failed",
-                description: "Payment successful but order creation failed. Please contact support.",
-                variant: "destructive",
-              });
-              return;
+              throw new Error('Failed to create order');
             }
 
             console.log('Order created successfully:', orderData.id);
 
-            // Create order items
-            const orderItems = items.map(item => ({
-              order_id: orderData.id,
-              product_id: item.product_id,
-              quantity: item.quantity,
-              price: item.product.price
-            }));
+            // Then create order items one by one to avoid batch insert issues
+            for (const item of items) {
+              const { error: itemError } = await supabase
+                .from('order_items')
+                .insert({
+                  order_id: orderData.id,
+                  product_id: item.product_id,
+                  quantity: item.quantity,
+                  price: item.product.price
+                });
 
-            console.log('Creating order items:', orderItems);
-
-            const { error: itemsError } = await supabase
-              .from('order_items')
-              .insert(orderItems);
-
-            if (itemsError) {
-              console.error('Error creating order items:', itemsError);
-              toast({
-                title: "Order Items Error",
-                description: "Order created but items not saved. Please contact support.",
-                variant: "destructive",
-              });
-              return;
+              if (itemError) {
+                console.error('Error creating order item:', itemError);
+                throw new Error('Failed to create order items');
+              }
             }
 
-            console.log('Order items created successfully');
+            console.log('All order items created successfully');
 
             // Clear cart after successful order
             await clearCart();
@@ -191,12 +179,12 @@ const Cart = () => {
               description: "Your order has been placed and payment processed.",
             });
 
-            navigate('/orders');
-          } catch (error) {
+            navigate('/profile');
+          } catch (error: any) {
             console.error('Error processing order:', error);
             toast({
-              title: "Order Processing Failed",
-              description: "Payment successful but order processing failed. Please contact support.",
+              title: "Order Items Error",
+              description: "Order created but items not saved. Please contact support.",
               variant: "destructive",
             });
           }

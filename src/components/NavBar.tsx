@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, LogOut, Settings } from "lucide-react";
+import { ShoppingCart, User, Menu, X, LogOut, Settings, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -98,20 +98,29 @@ const NavBar = () => {
           {/* Right Side Icons */}
           <div className="flex items-center space-x-4">
             {user && (
-              <button
-                onClick={() => navigate('/cart')}
-                className="relative p-2 text-gray-700 hover:text-green-600 transition-colors"
-              >
-                <ShoppingCart className="w-6 h-6" />
-                {totalItems > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                  >
-                    {totalItems}
-                  </Badge>
-                )}
-              </button>
+              <>
+                <button
+                  onClick={() => navigate('/cart')}
+                  className="relative p-2 text-gray-700 hover:text-green-600 transition-colors"
+                >
+                  <ShoppingCart className="w-6 h-6" />
+                  {totalItems > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {totalItems}
+                    </Badge>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="p-2 text-gray-700 hover:text-green-600 transition-colors"
+                >
+                  <UserCircle className="w-6 h-6" />
+                </button>
+              </>
             )}
 
             {user ? (
@@ -166,6 +175,17 @@ const NavBar = () => {
                   {item.label}
                 </button>
               ))}
+              {user && (
+                <button
+                  onClick={() => {
+                    navigate('/profile');
+                    setIsMenuOpen(false);
+                  }}
+                  className="block px-3 py-2 rounded-md text-base font-medium w-full text-left text-gray-700 hover:text-green-600 hover:bg-gray-50 transition-colors"
+                >
+                  Profile
+                </button>
+              )}
             </div>
           </div>
         )}
