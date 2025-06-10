@@ -46,52 +46,29 @@ const Admin = () => {
       try {
         console.log('Checking admin role for user:', user.id);
         
-        // Use a direct query without RLS to check admin role
-        const { data, error } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'admin'
-        });
+        // Use direct query to check admin role
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
 
         console.log('Admin check result:', { data, error });
 
         if (error) {
           console.error('Error checking admin role:', error);
-          // Fallback: try direct query
-          const { data: roleData, error: roleError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .eq('role', 'admin');
+          toast({
+            title: "Error",
+            description: "Failed to verify admin access",
+            variant: "destructive",
+          });
+          navigate('/');
+          setLoading(false);
+          return;
+        }
 
-          if (roleError) {
-            console.error('Fallback admin check failed:', roleError);
-            toast({
-              title: "Error",
-              description: "Failed to verify admin access",
-              variant: "destructive",
-            });
-            navigate('/');
-            setLoading(false);
-            return;
-          }
-
-          if (roleData && roleData.length > 0) {
-            console.log('User is admin (fallback check)');
-            setIsAdmin(true);
-            toast({
-              title: "Welcome Admin",
-              description: "Admin access granted successfully",
-            });
-          } else {
-            console.log('User is not admin (fallback check)');
-            toast({
-              title: "Access Denied",
-              description: "You don't have admin privileges",
-              variant: "destructive",
-            });
-            navigate('/');
-          }
-        } else if (data) {
+        if (data) {
           console.log('User is admin, granting access');
           setIsAdmin(true);
           toast({
