@@ -19,7 +19,7 @@ serve(async (req) => {
   );
 
   try {
-    const { paymentId, orderId, signature } = await req.json();
+    const { paymentId, orderId, signature, planType } = await req.json();
     
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
@@ -51,29 +51,31 @@ serve(async (req) => {
 
     console.log("Payment signature verified successfully for user:", user.email);
 
-    // Update subscription status
-    const subscriptionEnd = new Date();
-    subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
+    // If it's a subscription payment, update subscription status
+    if (planType === 'premium' || planType === 'enterprise') {
+      const subscriptionEnd = new Date();
+      subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
 
-    const { error: upsertError } = await supabaseClient.from("subscribers").upsert({
-      email: user.email,
-      user_id: user.id,
-      subscribed: true,
-      subscription_tier: "Premium",
-      subscription_end: subscriptionEnd.toISOString(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'email' });
+      const { error: upsertError } = await supabaseClient.from("subscribers").upsert({
+        email: user.email,
+        user_id: user.id,
+        subscribed: true,
+        subscription_tier: planType === 'premium' ? 'Premium' : 'Enterprise',
+        subscription_end: subscriptionEnd.toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'email' });
 
-    if (upsertError) {
-      console.error("Error updating subscription:", upsertError);
-      throw new Error("Failed to update subscription status");
+      if (upsertError) {
+        console.error("Error updating subscription:", upsertError);
+        throw new Error("Failed to update subscription status");
+      }
+
+      console.log("Subscription activated successfully for user:", user.email);
     }
-
-    console.log("Subscription activated successfully for user:", user.email);
 
     return new Response(JSON.stringify({ 
       success: true,
-      message: "Payment verified and subscription activated"
+      message: "Payment verified successfully"
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

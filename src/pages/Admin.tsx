@@ -21,11 +21,10 @@ const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   useEffect(() => {
     const checkAdminRole = async () => {
-      console.log('Checking admin role for user:', user?.email);
+      console.log('Admin check - Auth loading:', authLoading, 'User:', user?.email);
       
       if (authLoading) {
         console.log('Auth still loading, waiting...');
@@ -43,9 +42,8 @@ const Admin = () => {
         return;
       }
 
-      setCheckingAdmin(true);
       try {
-        console.log('Querying user_roles for user:', user.id);
+        console.log('Checking admin role for user:', user.id);
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
@@ -66,7 +64,14 @@ const Admin = () => {
           return;
         }
 
-        if (!data) {
+        if (data) {
+          console.log('User is admin, granting access');
+          setIsAdmin(true);
+          toast({
+            title: "Welcome Admin",
+            description: "Admin access granted successfully",
+          });
+        } else {
           console.log('User is not admin, redirecting to home');
           toast({
             title: "Access Denied",
@@ -74,15 +79,7 @@ const Admin = () => {
             variant: "destructive",
           });
           navigate('/');
-          return;
         }
-
-        console.log('User is admin, granting access');
-        setIsAdmin(true);
-        toast({
-          title: "Welcome Admin",
-          description: "Admin access granted successfully",
-        });
       } catch (error) {
         console.error('Error in admin check:', error);
         toast({
@@ -93,14 +90,13 @@ const Admin = () => {
         navigate('/');
       } finally {
         setLoading(false);
-        setCheckingAdmin(false);
       }
     };
 
     checkAdminRole();
   }, [user, authLoading, navigate]);
 
-  if (authLoading || loading || checkingAdmin) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
         <NavBar />
@@ -114,7 +110,17 @@ const Admin = () => {
   }
 
   if (!isAdmin) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+        <NavBar />
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="text-lg text-red-600">Access Denied</div>
+            <p className="text-gray-600 mt-2">You don't have admin privileges</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

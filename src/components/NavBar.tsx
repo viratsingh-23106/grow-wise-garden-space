@@ -51,8 +51,6 @@ const NavBar = () => {
     { path: "/", label: "Home" },
     { path: "/products", label: "Products" },
     { path: "/learn", label: "Learn" },
-    { path: "/webinars", label: "Webinars" },
-    { path: "/subscription", label: "Subscription" },
     ...(user ? [{ path: "/dashboard", label: "Dashboard" }] : []),
     ...(isAdmin ? [{ path: "/admin", label: "Admin" }] : []),
   ];

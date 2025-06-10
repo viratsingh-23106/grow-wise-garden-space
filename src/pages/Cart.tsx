@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, CreditCard } from "lucide-react";
@@ -74,7 +75,6 @@ const Cart = () => {
       return;
     }
 
-    // Check if Razorpay is loaded
     if (typeof (window as any).Razorpay === 'undefined') {
       toast({
         title: "Payment Gateway Error",
@@ -88,7 +88,7 @@ const Cart = () => {
     console.log('Starting checkout process for user:', user.email);
 
     try {
-      const totalAmount = Math.round(getTotalPrice() * 1.07 * 100); // Convert to paisa and include tax
+      const totalAmount = Math.round(getTotalPrice() * 1.07 * 100);
       
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
@@ -124,7 +124,6 @@ const Cart = () => {
 
       console.log('Razorpay order created for cart:', data);
 
-      // Initialize Razorpay checkout
       const options = {
         key: data.keyId,
         amount: data.amount,
@@ -135,13 +134,13 @@ const Cart = () => {
         handler: async function (response: any) {
           console.log('Payment successful for cart, processing order...', response);
           try {
-            // Create order in database with correct status
+            // Create order in database
             const { data: orderData, error: orderError } = await supabase
               .from('orders')
               .insert({
                 user_id: user.id,
-                total_amount: totalAmount / 100, // Convert back to rupees
-                status: 'pending' // Use 'pending' instead of 'completed'
+                total_amount: totalAmount / 100,
+                status: 'confirmed'
               })
               .select()
               .single();
@@ -156,6 +155,8 @@ const Cart = () => {
               return;
             }
 
+            console.log('Order created successfully:', orderData.id);
+
             // Create order items
             const orderItems = items.map(item => ({
               order_id: orderData.id,
@@ -163,6 +164,8 @@ const Cart = () => {
               quantity: item.quantity,
               price: item.product.price
             }));
+
+            console.log('Creating order items:', orderItems);
 
             const { error: itemsError } = await supabase
               .from('order_items')
@@ -177,6 +180,8 @@ const Cart = () => {
               });
               return;
             }
+
+            console.log('Order items created successfully');
 
             // Clear cart after successful order
             await clearCart();

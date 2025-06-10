@@ -5,12 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import NavBar from "@/components/NavBar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Package, DollarSign } from "lucide-react";
+import { Calendar, Package, DollarSign, Truck, CheckCircle } from "lucide-react";
 
 const Orders = () => {
   const { user } = useAuth();
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ['user-orders', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -37,7 +37,9 @@ const Orders = () => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -47,7 +49,18 @@ const Orders = () => {
       case 'confirmed': return 'bg-blue-100 text-blue-800';
       case 'shipped': return 'bg-purple-100 text-purple-800';
       case 'delivered': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending': return <Package className="h-4 w-4" />;
+      case 'confirmed': return <CheckCircle className="h-4 w-4" />;
+      case 'shipped': return <Truck className="h-4 w-4" />;
+      case 'delivered': return <CheckCircle className="h-4 w-4" />;
+      default: return <Package className="h-4 w-4" />;
     }
   };
 
@@ -94,10 +107,11 @@ const Orders = () => {
                       </CardDescription>
                     </div>
                     <div className="text-right">
-                      <Badge className={getStatusColor(order.status)}>
+                      <Badge className={`${getStatusColor(order.status)} flex items-center gap-1 mb-2`}>
+                        {getStatusIcon(order.status)}
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                       </Badge>
-                      <div className="flex items-center gap-1 mt-1 text-lg font-bold text-gray-900">
+                      <div className="flex items-center gap-1 text-lg font-bold text-gray-900">
                         <DollarSign className="h-4 w-4" />
                         {order.total_amount}
                       </div>
@@ -112,27 +126,33 @@ const Orders = () => {
                       {order.order_items?.length || 0} item{(order.order_items?.length || 0) !== 1 ? 's' : ''}
                     </div>
                     
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {order.order_items?.map((item: any) => (
-                        <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                          {item.products?.image_url && (
-                            <img 
-                              src={item.products.image_url} 
-                              alt={item.products?.name}
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">
-                              {item.products?.name}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Qty: {item.quantity} × ${item.price}
-                            </p>
+                    {order.order_items && order.order_items.length > 0 ? (
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {order.order_items.map((item: any) => (
+                          <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            {item.products?.image_url && (
+                              <img 
+                                src={item.products.image_url} 
+                                alt={item.products?.name}
+                                className="w-12 h-12 object-cover rounded"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">
+                                {item.products?.name || 'Product'}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Qty: {item.quantity} × ${item.price}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500 italic">
+                        Order items not available
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -142,7 +162,13 @@ const Orders = () => {
           <div className="text-center py-12">
             <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No orders yet</h3>
-            <p className="text-gray-600">When you place orders, they will appear here.</p>
+            <p className="text-gray-600 mb-4">When you place orders, they will appear here.</p>
+            <button 
+              onClick={() => window.location.href = '/products'}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
+            >
+              Start Shopping
+            </button>
           </div>
         )}
       </div>
