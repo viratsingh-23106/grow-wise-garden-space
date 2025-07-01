@@ -76,7 +76,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return false;
       }
 
-      const response = data as AdminSecretResponse;
+      const response = data as unknown as AdminSecretResponse;
 
       if (response?.success) {
         const sessionToken = response.session_token;
