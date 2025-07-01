@@ -17,6 +17,7 @@ import Cart from "./pages/Cart";
 import Orders from "./pages/Orders";
 import Profile from "./pages/Profile";
 import SensorKit from "./pages/SensorKit";
+import Subscription from "./pages/Subscription";
 import GuidanceSteps from "./components/learn/GuidanceSteps";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
@@ -39,6 +40,7 @@ const App = () => (
                 <Route path="/sensor-kit" element={<SensorKit />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/learn" element={<Learn />} />
+                <Route path="/subscription" element={<Subscription />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/guidance/:categoryId/steps" element={<GuidanceSteps />} />
                 <Route path="/auth" element={<Auth />} />
@@ -50,7 +52,6 @@ const App = () => (
                 <Route path="/blog" element={<Learn />} />
                 <Route path="/community" element={<Learn />} />
                 <Route path="/webinars" element={<Learn />} />
-                <Route path="/subscription" element={<Learn />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
