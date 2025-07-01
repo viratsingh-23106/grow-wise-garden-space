@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Crown, Zap, Shield, Users, Star, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,29 @@ const Subscription = () => {
   const { isSubscribed, subscriptionTier, loading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+
+  // Load Razorpay script
+  useEffect(() => {
+    const loadRazorpay = () => {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => {
+          setRazorpayLoaded(true);
+          resolve(true);
+        };
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+    };
+
+    if (!(window as any).Razorpay) {
+      loadRazorpay();
+    } else {
+      setRazorpayLoaded(true);
+    }
+  }, []);
 
   const handleSubscription = async (planType: 'premium' | 'enterprise') => {
     if (!user) {
@@ -28,11 +50,10 @@ const Subscription = () => {
       return;
     }
 
-    // Check if Razorpay is loaded
-    if (typeof (window as any).Razorpay === 'undefined') {
+    if (!razorpayLoaded || typeof (window as any).Razorpay === 'undefined') {
       toast({
-        title: "Payment Gateway Error",
-        description: "Payment gateway is not loaded. Please refresh the page and try again.",
+        title: "Payment Gateway Loading",
+        description: "Please wait for payment gateway to load and try again.",
         variant: "destructive",
       });
       return;
@@ -184,6 +205,13 @@ const Subscription = () => {
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Unlock advanced features and take your farming to the next level with our premium plans
           </p>
+          {!razorpayLoaded && (
+            <div className="mt-4">
+              <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                Loading payment gateway...
+              </Badge>
+            </div>
+          )}
         </div>
 
         {isSubscribed && (

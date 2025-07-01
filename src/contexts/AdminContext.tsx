@@ -12,6 +12,12 @@ interface AdminContextType {
   signOutAdmin: () => void;
 }
 
+interface AdminSecretResponse {
+  success: boolean;
+  session_token?: string;
+  error?: string;
+}
+
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export const useAdmin = () => {
@@ -70,22 +76,26 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return false;
       }
 
-      if (data?.success) {
-        const sessionToken = data.session_token;
-        setAdminSessionToken(sessionToken);
-        setIsAdminAuthenticated(true);
-        localStorage.setItem('admin_session_token', sessionToken);
-        
-        toast({
-          title: "Success",
-          description: "Admin access granted",
-        });
-        
-        return true;
+      const response = data as AdminSecretResponse;
+
+      if (response?.success) {
+        const sessionToken = response.session_token;
+        if (sessionToken) {
+          setAdminSessionToken(sessionToken);
+          setIsAdminAuthenticated(true);
+          localStorage.setItem('admin_session_token', sessionToken);
+          
+          toast({
+            title: "Success",
+            description: "Admin access granted",
+          });
+          
+          return true;
+        }
       } else {
         toast({
           title: "Access Denied",
-          description: data?.error || "Invalid admin secret",
+          description: response?.error || "Invalid admin secret",
           variant: "destructive",
         });
         return false;
@@ -97,8 +107,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: "An error occurred while validating admin secret",
         variant: "destructive",
       });
-      return false;
     }
+    return false;
   };
 
   const logAdminActivity = async (
