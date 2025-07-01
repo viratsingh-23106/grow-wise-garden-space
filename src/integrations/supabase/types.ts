@@ -9,6 +9,60 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          session_token: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          session_token: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          session_token?: string
+        }
+        Relationships: []
+      }
+      admin_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          last_activity: string
+          session_token: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity?: string
+          session_token: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity?: string
+          session_token?: string
+        }
+        Relationships: []
+      }
       blog_categories: {
         Row: {
           created_at: string
@@ -847,6 +901,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_admin_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_product_average_rating: {
         Args: { product_uuid: string }
         Returns: number
@@ -854,6 +912,24 @@ export type Database = {
       get_product_review_count: {
         Args: { product_uuid: string }
         Returns: number
+      }
+      log_admin_activity: {
+        Args: {
+          token: string
+          action_name: string
+          entity_type_name: string
+          entity_id_val?: string
+          details_json?: Json
+        }
+        Returns: undefined
+      }
+      validate_admin_secret: {
+        Args: { secret_input: string }
+        Returns: Json
+      }
+      validate_admin_session: {
+        Args: { token: string }
+        Returns: boolean
       }
     }
     Enums: {

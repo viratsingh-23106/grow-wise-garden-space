@@ -1,12 +1,11 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ShoppingCart, User, Menu, X, LogOut, Settings, UserCircle } from "lucide-react";
+import { ShoppingCart, User, Menu, X, LogOut, Settings, UserCircle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
-import { supabase } from "@/integrations/supabase/client";
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -14,32 +13,6 @@ const NavBar = () => {
   const { user, signOut } = useAuth();
   const { getTotalItems } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      try {
-        const { data } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-
-        setIsAdmin(!!data);
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      }
-    };
-
-    checkAdminStatus();
-  }, [user]);
 
   const totalItems = getTotalItems();
 
@@ -52,7 +25,7 @@ const NavBar = () => {
     { path: "/products", label: "Products" },
     { path: "/learn", label: "Learn" },
     ...(user ? [{ path: "/dashboard", label: "Dashboard" }] : []),
-    ...(isAdmin ? [{ path: "/admin", label: "Admin" }] : []),
+    { path: "/admin", label: "Admin", icon: Shield },
   ];
 
   const handleSignOut = async () => {
@@ -86,10 +59,11 @@ const NavBar = () => {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive(item.path) ? 'text-green-600 bg-green-50' : ''
-                }`}
+                } ${item.path === '/admin' ? 'text-red-600 hover:text-red-700' : ''}`}
               >
+                {item.icon && <item.icon className="w-4 h-4" />}
                 {item.label}
               </button>
             ))}
@@ -166,12 +140,13 @@ const NavBar = () => {
                     navigate(item.path);
                     setIsMenuOpen(false);
                   }}
-                  className={`block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors ${
                     isActive(item.path)
                       ? 'text-green-600 bg-green-50'
                       : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
-                  }`}
+                  } ${item.path === '/admin' ? 'text-red-600 hover:text-red-700' : ''}`}
                 >
+                  {item.icon && <item.icon className="w-4 h-4" />}
                   {item.label}
                 </button>
               ))}
@@ -181,8 +156,9 @@ const NavBar = () => {
                     navigate('/profile');
                     setIsMenuOpen(false);
                   }}
-                  className="block px-3 py-2 rounded-md text-base font-medium w-full text-left text-gray-700 hover:text-green-600 hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium w-full text-left text-gray-700 hover:text-green-600 hover:bg-gray-50 transition-colors"
                 >
+                  <UserCircle className="w-4 h-4" />
                   Profile
                 </button>
               )}
