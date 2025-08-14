@@ -151,7 +151,7 @@ const SensorKit = () => {
               </p>
               <div className="flex items-center gap-4 mb-6">
                 <span className="text-3xl font-bold text-green-600">
-                  ${sensorKitProduct?.price || '149.99'}
+                  {sensorKitProduct?.price || '149.99'}
                 </span>
                 <Badge variant="secondary" className="bg-green-100 text-green-800">
                   Complete Kit
@@ -308,7 +308,7 @@ const SensorKit = () => {
             onClick={handleAddToCart}
             disabled={!user || !sensorKitProduct?.id}
           >
-            {!user ? 'Sign In to Purchase' : !sensorKitProduct?.id ? 'Product Unavailable' : `Add to Cart - $${sensorKitProduct?.price || '149.99'}`}
+            {!user ? 'Sign In to Purchase' : !sensorKitProduct?.id ? 'Product Unavailable' : `Add to Cart - ${sensorKitProduct?.price || '149.99'}`}
           </Button>
         </div>
       </div>

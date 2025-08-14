@@ -50,7 +50,7 @@ const ProductCard = ({ product, onAddToCart, user }: ProductCardProps) => {
             {product.type}
           </Badge>
           <span className="text-2xl font-bold text-green-600">
-            ${product.price}
+            {product.price}
           </span>
         </div>
         <CardTitle className="text-xl font-semibold text-gray-900">
