@@ -43,7 +43,7 @@ const Index = () => {
         <div className="relative max-w-7xl mx-auto text-center">
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
             Grow Smarter with
-            <span className="block text-green-600">AgriTech Solutions</span>
+            <span className="block text-green-600">BloomSync Solutions</span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
             From seeds to harvest, we provide everything you need for successful gardening with IoT-powered insights and expert guidance.
@@ -140,7 +140,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-300 py-12 px-4">
         <div className="max-w-7xl mx-auto text-center">
-          <h3 className="text-2xl font-bold text-white mb-4">AgriTech Solutions</h3>
+          <h3 className="text-2xl font-bold text-white mb-4">BloomSync Solutions</h3>
           <p className="mb-6">Empowering gardeners with technology and knowledge</p>
           <div className="flex justify-center space-x-6">
             <Link to="/products" className="hover:text-white transition-colors">Products</Link>
