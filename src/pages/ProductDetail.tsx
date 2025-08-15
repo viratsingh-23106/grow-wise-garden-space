@@ -190,7 +190,7 @@ const ProductDetail = () => {
               </div>
             </div>
             
-            <p className="text-xl font-bold text-green-600">${product.price}</p>
+            <p className="text-xl font-bold text-green-600">{product.price}</p>
             
             <p className="text-gray-700">{product.description}</p>
             
@@ -201,7 +201,7 @@ const ProductDetail = () => {
                   <Badge 
                     key={sensor}
                     variant="secondary"
-                    className={`${sensorTypes[sensor]?.color}`}
+                    className={`{sensorTypes[sensor]?.color}`}
                   >
                     {sensorTypes[sensor]?.name}
                   </Badge>
@@ -211,7 +211,7 @@ const ProductDetail = () => {
             
             <div>
               <p className="text-sm text-gray-600">
-                In Stock: <span className={`font-medium ${product.stock_quantity > 10 ? 'text-green-600' : 'text-amber-600'}`}>
+                In Stock: <span className={`font-medium {product.stock_quantity > 10 ? 'text-green-600' : 'text-amber-600'}`}>
                   {product.stock_quantity} available
                 </span>
               </p>
