@@ -63,7 +63,7 @@ const Auth = () => {
             <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
               <span className="text-white font-bold">A</span>
             </div>
-            <span className="text-2xl font-bold text-gray-900">AgriTech</span>
+            <span className="text-2xl font-bold text-gray-900">BloomSync</span>
           </Link>
         </div>
 
