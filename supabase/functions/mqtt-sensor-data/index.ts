@@ -39,7 +39,7 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const body = await req.json();
@@ -80,14 +80,20 @@ serve(async (req) => {
 
       const sensorId = sensorData.id;
 
-      // Process each sensor type
+      // Process each sensor type with column mapping
       const sensorEntries = [];
       for (const [sensorType, value] of Object.entries(batchPayload.sensors)) {
         if (value !== undefined && value !== null) {
+          // Map sensor keys to database columns
+          let dbColumn = sensorType;
+          if (sensorType === 'ph') dbColumn = 'ph_level';
+          if (sensorType === 'npk') dbColumn = 'nutrients';
+          if (sensorType === 'light') dbColumn = 'light_level';
+          
           const sensorData = {
             sensor_id: sensorId,
             user_id: batchPayload.user_id,
-            [sensorType]: value,
+            [dbColumn]: value,
             recorded_at: batchPayload.timestamp || new Date().toISOString()
           };
           sensorEntries.push(sensorData);
@@ -167,13 +173,19 @@ serve(async (req) => {
         throw new Error('Failed to get sensor ID');
       }
 
+      // Map sensor type to database column
+      let dbColumn = payload.sensor_type;
+      if (payload.sensor_type === 'ph') dbColumn = 'ph_level';
+      if (payload.sensor_type === 'npk') dbColumn = 'nutrients';
+      if (payload.sensor_type === 'light') dbColumn = 'light_level';
+
       // Insert sensor data
       const { error: insertError } = await supabaseClient
         .from('sensor_data')
         .insert({
           sensor_id: sensorData.id,
           user_id: payload.user_id,
-          [payload.sensor_type]: payload.value,
+          [dbColumn]: payload.value,
           recorded_at: payload.timestamp || new Date().toISOString()
         });
 
