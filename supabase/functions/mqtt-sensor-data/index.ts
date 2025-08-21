@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-device-key',
 };
 
 interface SensorPayload {
@@ -31,12 +31,30 @@ interface BatchSensorPayload {
 }
 
 serve(async (req) => {
+  console.log('MQTT Sensor Data function called');
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Basic device authentication - check for device key header
+    const deviceKey = req.headers.get('x-device-key');
+    if (!deviceKey) {
+      console.error('Missing device key');
+      return new Response(
+        JSON.stringify({ error: 'Device authentication required. Include x-device-key header.' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // For now, accept any device key - in production, validate against a list
+    console.log('Device authenticated with key:', deviceKey.substring(0, 8) + '...');
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''

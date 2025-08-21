@@ -64,5 +64,8 @@ verify_jwt = true
 [functions.verify-payment]
 verify_jwt = true
 
+[functions.mqtt-sensor-data]
+verify_jwt = false
+
 [analytics]
 enabled = false
