@@ -14,21 +14,7 @@ import NavBar from '@/components/NavBar';
 import RealTimeSensorData from '@/components/dashboard/RealTimeSensorData';
 import SensorAlerts from '@/components/dashboard/SensorAlerts';
 import SensorManagement from '@/components/dashboard/SensorManagement';
-
-// Mock data for the overview tab
-const mockSensorData = [
-  { name: "Temperature", value: "22.5°C", range: "18-28°C", status: "optimal", trend: "stable", icon: Thermometer },
-  { name: "Humidity", value: "65%", range: "60-80%", status: "optimal", trend: "up", icon: Droplets },
-  { name: "Soil Moisture", value: "45%", range: "40-60%", status: "low", trend: "down", icon: Gauge },
-  { name: "Light Level", value: "85%", range: "70-100%", status: "optimal", trend: "up", icon: Sun }
-];
-
-const sensorDevices = [
-  { id: "all", name: "All Devices", location: "", status: "online", battery: 85 },
-  { id: "sensor-001", name: "Garden Sensor A", location: "Front Garden", status: "online", battery: 92 },
-  { id: "sensor-002", name: "Greenhouse Monitor", location: "Main Greenhouse", status: "online", battery: 78 },
-  { id: "sensor-003", name: "Indoor Plants", location: "Living Room", status: "warning", battery: 45 }
-];
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 const cropTypes = [
   { id: "all", name: "All Crops" },
@@ -37,19 +23,14 @@ const cropTypes = [
   { id: "basil", name: "Basil" }
 ];
 
-const alerts = [
-  { id: 1, message: "Low soil moisture detected in Garden Sensor A", severity: "warning", timestamp: "2 hours ago" },
-  { id: 2, message: "Optimal temperature reached for tomato growth", severity: "info", timestamp: "4 hours ago" },
-  { id: 3, message: "Battery low on Indoor Plants sensor", severity: "critical", timestamp: "6 hours ago" }
-];
-
 const Dashboard = () => {
   const { user } = useAuth();
-  const { isSubscribed, trialEnded, loading } = useSubscription();
+  const { isSubscribed, trialEnded, loading: subscriptionLoading } = useSubscription();
   const [timeRange, setTimeRange] = useState("24h");
   const [selectedDevice, setSelectedDevice] = useState("all");
   const [selectedCrop, setSelectedCrop] = useState("all");
 
+  const { metrics, devices, alerts, loading: dashboardLoading } = useDashboardData(selectedDevice, timeRange);
   const canAccessDashboard = isSubscribed || !trialEnded;
 
   // Redirect to auth if not logged in
@@ -63,7 +44,18 @@ const Dashboard = () => {
       case "warning": return "text-warning";  
       case "low": return "text-warning";
       case "critical": return "text-destructive";
+      case "offline": return "text-muted-foreground";
       default: return "text-muted-foreground";
+    }
+  };
+
+  const getSensorIconComponent = (sensorName: string) => {
+    switch (sensorName.toLowerCase()) {
+      case "temperature": return Thermometer;
+      case "humidity": return Droplets;
+      case "soil moisture": return Gauge;
+      case "light level": return Sun;
+      default: return Gauge;
     }
   };
 
@@ -75,7 +67,7 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
+  if (subscriptionLoading || dashboardLoading) {
     return (
       <div className="min-h-screen bg-background">
         <NavBar />
@@ -157,9 +149,9 @@ const Dashboard = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {sensorDevices.map(device => (
+                      {devices.map(device => (
                         <SelectItem key={device.id} value={device.id}>
-                          {device.name}
+                          {device.sensor_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -185,8 +177,8 @@ const Dashboard = () => {
 
               {/* Sensor Metrics Overview */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {mockSensorData.map((sensor, index) => {
-                  const Icon = sensor.icon;
+                {metrics.map((sensor, index) => {
+                  const Icon = getSensorIconComponent(sensor.name);
                   const TrendIcon = getTrendIcon(sensor.trend);
                   
                   return (
@@ -225,18 +217,25 @@ const Dashboard = () => {
                     {alerts.slice(0, 3).map((alert, index) => (
                       <div key={index} className="flex items-start space-x-3 p-3 rounded-lg border">
                         <div className={`w-2 h-2 rounded-full mt-2 ${
-                          alert.severity === 'critical' ? 'bg-destructive' :
-                          alert.severity === 'warning' ? 'bg-warning' : 'bg-info'
+                          alert.alert_type === 'critical' ? 'bg-destructive' :
+                          alert.alert_type === 'warning' ? 'bg-warning' : 'bg-info'
                         }`} />
                         <div className="flex-1">
                           <p className="text-sm font-medium">{alert.message}</p>
-                          <p className="text-xs text-muted-foreground">{alert.timestamp}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(alert.created_at).toLocaleString()}
+                          </p>
                         </div>
-                        <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}>
-                          {alert.severity}
+                        <Badge variant={alert.alert_type === 'critical' ? 'destructive' : 'secondary'}>
+                          {alert.alert_type}
                         </Badge>
                       </div>
                     ))}
+                    {alerts.length === 0 && (
+                      <div className="text-center py-4 text-muted-foreground">
+                        No active alerts
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
