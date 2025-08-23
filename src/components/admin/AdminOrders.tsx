@@ -1,137 +1,28 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Eye, Package, Truck, CheckCircle, XCircle, Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
-import { useAdmin } from "@/contexts/AdminContext";
-
-interface Order {
-  id: string;
-  user_id: string;
-  total_amount: number;
-  status: string;
-  shipping_address: any;
-  created_at: string;
-  updated_at: string;
-  user_email?: string;
-  items_count?: number;
-}
+import { useAdminData } from "@/hooks/useAdminData";
 
 const AdminOrders = () => {
-  const { logAdminActivity } = useAdmin();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const { orders, loading, updateOrderStatus } = useAdminData();
 
-  useEffect(() => {
-    fetchOrders();
-
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('orders-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchOrders)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  useEffect(() => {
-    let filtered = orders;
-
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.user_email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    setFilteredOrders(filtered);
-  }, [orders, searchTerm, statusFilter]);
-
-  const fetchOrders = async () => {
-    try {
-      const { data: ordersData, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            id,
-            quantity,
-            price,
-            products (
-              name
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Get user emails from auth.users (this requires admin privileges)
-      const { data: authUsersResponse } = await supabase.auth.admin.listUsers();
-      const authUsers = authUsersResponse?.users || [];
-
-      const ordersWithDetails = ordersData?.map(order => ({
-        ...order,
-        user_email: authUsers.find((u: any) => u.id === order.user_id)?.email || 'N/A',
-        items_count: order.order_items?.length || 0
-      })) || [];
-
-      setOrders(ordersWithDetails);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch orders",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-
-      if (error) throw error;
-
-      await logAdminActivity('UPDATE', 'orders', orderId, { status: newStatus });
-      
-      toast({
-        title: "Success",
-        description: `Order status updated to ${newStatus}`,
-      });
-
-      fetchOrders();
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update order status",
-        variant: "destructive",
-      });
-    }
-  };
+  // Filter orders locally
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = !searchTerm || 
+      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.user_email?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {

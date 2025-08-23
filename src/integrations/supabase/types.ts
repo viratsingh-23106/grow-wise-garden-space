@@ -987,6 +987,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_upsert_blog: {
+        Args: {
+          admin_token: string
+          blog_content: string
+          blog_id?: string
+          blog_status: string
+          blog_title: string
+        }
+        Returns: string
+      }
+      admin_upsert_webinar: {
+        Args: {
+          admin_token: string
+          webinar_description: string
+          webinar_duration_minutes?: number
+          webinar_host_name: string
+          webinar_id?: string
+          webinar_max_participants?: number
+          webinar_recording_url?: string
+          webinar_scheduled_date: string
+          webinar_status?: string
+          webinar_title: string
+          webinar_zoom_link?: string
+        }
+        Returns: string
+      }
       check_sensor_thresholds: {
         Args: {
           p_sensor_id: string

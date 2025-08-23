@@ -1,111 +1,15 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Crown } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
-
-interface User {
-  id: string;
-  email: string;
-  full_name: string;
-  created_at: string;
-  subscription?: {
-    subscribed: boolean;
-    subscription_tier: string;
-  };
-  role?: string;
-}
+import { useAdminData } from "@/hooks/useAdminData";
 
 const AdminUsers = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      // Get profiles with subscription data
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          full_name,
-          created_at
-        `);
-
-      if (profilesError) throw profilesError;
-
-      // Get subscription data
-      const { data: subscribers } = await supabase
-        .from('subscribers')
-        .select('user_id, subscribed, subscription_tier');
-
-      // Get user roles
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      // Get auth users for email
-      const { data: authUsersResponse } = await supabase.auth.admin.listUsers();
-      const authUsers = authUsersResponse?.users || [];
-
-      // Combine all data
-      const combinedUsers = profiles?.map(profile => {
-        const authUser = authUsers.find((u: any) => u.id === profile.id);
-        const subscription = subscribers?.find(s => s.user_id === profile.id);
-        const userRole = roles?.find(r => r.user_id === profile.id);
-
-        return {
-          ...profile,
-          email: authUser?.email || 'N/A',
-          subscription,
-          role: userRole?.role
-        };
-      }) || [];
-
-      setUsers(combinedUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch users",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const makeAdmin = async (userId: string, email: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('create-admin-user', {
-        body: { email }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "User has been made an admin",
-      });
-
-      fetchUsers(); // Refresh the list
-    } catch (error) {
-      console.error('Error making user admin:', error);
-      toast({
-        title: "Error",
-        description: "Failed to make user admin",
-        variant: "destructive",
-      });
-    }
-  };
+  const { users, loading, makeUserAdmin } = useAdminData();
 
   const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -162,7 +66,7 @@ const AdminUsers = () => {
                 
                 {user.role !== 'admin' && (
                   <Button
-                    onClick={() => makeAdmin(user.id, user.email)}
+                    onClick={() => makeUserAdmin(user.id)}
                     variant="outline"
                     size="sm"
                   >
