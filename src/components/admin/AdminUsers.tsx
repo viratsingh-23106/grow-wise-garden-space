@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Crown } from "lucide-react";
+import { Search, Crown, Users } from "lucide-react";
 import { useAdminData } from "@/hooks/useAdminData";
 
 const AdminUsers = () => {
@@ -23,7 +23,11 @@ const AdminUsers = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">User Management</h2>
+        <div className="flex items-center gap-2">
+          <Users className="w-6 h-6" />
+          <h2 className="text-2xl font-bold">User Management</h2>
+          <Badge variant="secondary">{users.length} Total Users</Badge>
+        </div>
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
@@ -53,13 +57,14 @@ const AdminUsers = () => {
                   <p className="text-sm text-gray-600">{user.email}</p>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
                     <span>Joined: {new Date(user.created_at).toLocaleDateString()}</span>
-                    {user.subscription && (
-                      <Badge variant={user.subscription.subscribed ? "default" : "outline"}>
-                        {user.subscription.subscribed 
-                          ? `${user.subscription.subscription_tier} Subscriber`
-                          : 'Free User'
-                        }
-                      </Badge>
+                    <Badge variant={user.subscribed ? "default" : "outline"}>
+                      {user.subscribed 
+                        ? `${user.subscription_tier || 'Premium'} Subscriber`
+                        : 'Free User'
+                      }
+                    </Badge>
+                    {user.subscription_end && (
+                      <span>Expires: {new Date(user.subscription_end).toLocaleDateString()}</span>
                     )}
                   </div>
                 </div>
@@ -69,7 +74,9 @@ const AdminUsers = () => {
                     onClick={() => makeUserAdmin(user.id)}
                     variant="outline"
                     size="sm"
+                    className="flex items-center gap-2"
                   >
+                    <Crown className="w-4 h-4" />
                     Make Admin
                   </Button>
                 )}

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -8,8 +9,10 @@ export interface AdminUser {
   email: string;
   full_name: string;
   created_at: string;
-  subscription: any;
   role: string;
+  subscribed: boolean;
+  subscription_tier: string;
+  subscription_end: string;
 }
 
 export interface AdminOrder {
@@ -17,11 +20,10 @@ export interface AdminOrder {
   user_id: string;
   user_email: string;
   total_amount: number;
+  items_count: number;
   status: string;
   shipping_address: any;
   created_at: string;
-  updated_at: string;
-  items_count: number;
 }
 
 export interface AdminBlog {
@@ -32,6 +34,8 @@ export interface AdminBlog {
   author_id: string;
   author_email: string;
   created_at: string;
+  updated_at: string;
+  published_at: string;
 }
 
 export interface AdminWebinar {
@@ -46,7 +50,7 @@ export interface AdminWebinar {
   zoom_meeting_link: string;
   recording_url: string;
   created_at: string;
-  registrations_count: number;
+  updated_at: string;
 }
 
 export interface AdminDiscussion {
@@ -57,7 +61,29 @@ export interface AdminDiscussion {
   author_id: string;
   author_email: string;
   created_at: string;
-  replies_count: number;
+  updated_at: string;
+}
+
+export interface AdminProduct {
+  id: string;
+  name: string;
+  type: string;
+  price: number;
+  stock_quantity: number;
+  description: string;
+  image_url: string;
+  sensors: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DashboardCounts {
+  total_users: number;
+  total_orders: number;
+  total_revenue: number;
+  pending_blogs: number;
+  total_webinars: number;
+  active_discussions: number;
 }
 
 export const useAdminData = () => {
@@ -67,53 +93,30 @@ export const useAdminData = () => {
   const [blogs, setBlogs] = useState<AdminBlog[]>([]);
   const [webinars, setWebinars] = useState<AdminWebinar[]>([]);
   const [discussions, setDiscussions] = useState<AdminDiscussion[]>([]);
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [dashboardCounts, setDashboardCounts] = useState<DashboardCounts>({
+    total_users: 0,
+    total_orders: 0,
+    total_revenue: 0,
+    pending_blogs: 0,
+    total_webinars: 0,
+    active_discussions: 0,
+  });
   const [loading, setLoading] = useState(false);
 
-  // Fetch all data with admin privileges using service role
+  // Fetch functions using secure admin RPCs
   const fetchUsers = async () => {
     if (!adminSessionToken) return;
     
     try {
-      // Fetch profiles with subscription and role data
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name, created_at');
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        toast.error('Failed to fetch user profiles');
-        return;
-      }
-
-      // Fetch subscribers data
-      const { data: subscribersData } = await supabase
-        .from('subscribers')
-        .select('user_id, subscribed, subscription_tier, subscription_end');
-
-      // Fetch user roles
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      // For admin operations, we'll simulate the admin access for now
-      // In production, you would use the admin service role key
-      const usersData: AdminUser[] = profilesData.map(profile => {
-        const subscription = subscribersData?.find(sub => sub.user_id === profile.id);
-        const userRole = rolesData?.find(role => role.user_id === profile.id);
-
-        return {
-          id: profile.id,
-          email: `user-${profile.id.slice(0, 8)}@example.com`, // Simulated for demo
-          full_name: profile.full_name || 'Unknown',
-          created_at: profile.created_at,
-          subscription: subscription || null,
-          role: userRole?.role || 'user'
-        };
+      const { data, error } = await supabase.rpc('admin_get_users', {
+        admin_token: adminSessionToken
       });
 
-      setUsers(usersData);
+      if (error) throw error;
+      setUsers(data || []);
     } catch (error) {
-      console.error('Error in fetchUsers:', error);
+      console.error('Error fetching users:', error);
       toast.error('Failed to fetch users');
     }
   };
@@ -122,45 +125,32 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      const { data: ordersData, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          user_id,
-          total_amount,
-          status,
-          shipping_address,
-          created_at,
-          updated_at
-        `)
+      const { data, error } = await supabase.rpc('admin_get_orders', {
+        admin_token: adminSessionToken
+      });
+
+      if (error) throw error;
+      setOrders(data || []);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast.error('Failed to fetch orders');
+    }
+  };
+
+  const fetchProducts = async () => {
+    if (!adminSessionToken) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching orders:', error);
-        toast.error('Failed to fetch orders');
-        return;
-      }
-
-      // Get items count for each order
-      const ordersWithDetails = await Promise.all(
-        (ordersData || []).map(async (order) => {
-          const { count } = await supabase
-            .from('order_items')
-            .select('id', { count: 'exact' })
-            .eq('order_id', order.id);
-
-          return {
-            ...order,
-            user_email: `user-${order.user_id.slice(0, 8)}@example.com`, // Simulated for demo
-            items_count: count || 0
-          };
-        })
-      );
-
-      setOrders(ordersWithDetails);
+      if (error) throw error;
+      setProducts(data || []);
     } catch (error) {
-      console.error('Error in fetchOrders:', error);
-      toast.error('Failed to fetch orders');
+      console.error('Error fetching products:', error);
+      toast.error('Failed to fetch products');
     }
   };
 
@@ -168,32 +158,14 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      const { data: blogsData, error } = await supabase
-        .from('blog_posts')
-        .select(`
-          id,
-          title,
-          content,
-          status,
-          author_id,
-          created_at
-        `)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('admin_list_blogs', {
+        admin_token: adminSessionToken
+      });
 
-      if (error) {
-        console.error('Error fetching blogs:', error);
-        toast.error('Failed to fetch blogs');
-        return;
-      }
-
-      const blogsWithAuthors = (blogsData || []).map(blog => ({
-        ...blog,
-        author_email: `author-${blog.author_id.slice(0, 8)}@example.com` // Simulated for demo
-      }));
-
-      setBlogs(blogsWithAuthors);
+      if (error) throw error;
+      setBlogs(data || []);
     } catch (error) {
-      console.error('Error in fetchBlogs:', error);
+      console.error('Error fetching blogs:', error);
       toast.error('Failed to fetch blogs');
     }
   };
@@ -202,47 +174,14 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      const { data: webinarsData, error } = await supabase
-        .from('webinars')
-        .select(`
-          id,
-          title,
-          description,
-          host_name,
-          scheduled_date,
-          duration_minutes,
-          max_participants,
-          status,
-          zoom_meeting_link,
-          recording_url,
-          created_at
-        `)
-        .order('scheduled_date', { ascending: false });
+      const { data, error } = await supabase.rpc('admin_list_webinars', {
+        admin_token: adminSessionToken
+      });
 
-      if (error) {
-        console.error('Error fetching webinars:', error);
-        toast.error('Failed to fetch webinars');
-        return;
-      }
-
-      // Get registration counts
-      const webinarsWithCounts = await Promise.all(
-        (webinarsData || []).map(async (webinar) => {
-          const { count } = await supabase
-            .from('webinar_registrations')
-            .select('id', { count: 'exact' })
-            .eq('webinar_id', webinar.id);
-
-          return {
-            ...webinar,
-            registrations_count: count || 0
-          };
-        })
-      );
-
-      setWebinars(webinarsWithCounts);
+      if (error) throw error;
+      setWebinars(data || []);
     } catch (error) {
-      console.error('Error in fetchWebinars:', error);
+      console.error('Error fetching webinars:', error);
       toast.error('Failed to fetch webinars');
     }
   };
@@ -251,71 +190,130 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      const { data: discussionsData, error } = await supabase
-        .from('community_discussions')
-        .select(`
-          id,
-          title,
-          content,
-          status,
-          author_id,
-          created_at
-        `)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('admin_list_discussions', {
+        admin_token: adminSessionToken
+      });
 
-      if (error) {
-        console.error('Error fetching discussions:', error);
-        toast.error('Failed to fetch discussions');
-        return;
-      }
-
-      // Get reply counts
-      const discussionsWithCounts = await Promise.all(
-        (discussionsData || []).map(async (discussion) => {
-          const { count } = await supabase
-            .from('discussion_replies')
-            .select('id', { count: 'exact' })
-            .eq('discussion_id', discussion.id);
-
-          return {
-            ...discussion,
-            author_email: `author-${discussion.author_id.slice(0, 8)}@example.com`, // Simulated for demo
-            replies_count: count || 0
-          };
-        })
-      );
-
-      setDiscussions(discussionsWithCounts);
+      if (error) throw error;
+      setDiscussions(data || []);
     } catch (error) {
-      console.error('Error in fetchDiscussions:', error);
+      console.error('Error fetching discussions:', error);
       toast.error('Failed to fetch discussions');
     }
   };
 
-  // Action functions using direct database access (admin privileges required)
+  const fetchDashboardCounts = async () => {
+    if (!adminSessionToken) return;
+    
+    try {
+      const { data, error } = await supabase.rpc('admin_get_dashboard_counts', {
+        admin_token: adminSessionToken
+      });
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setDashboardCounts({
+          total_users: Number(data[0].total_users),
+          total_orders: Number(data[0].total_orders),
+          total_revenue: Number(data[0].total_revenue),
+          pending_blogs: Number(data[0].pending_blogs),
+          total_webinars: Number(data[0].total_webinars),
+          active_discussions: Number(data[0].active_discussions),
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard counts:', error);
+      toast.error('Failed to fetch dashboard statistics');
+    }
+  };
+
+  // Action functions
+  const makeUserAdmin = async (userId: string) => {
+    if (!adminSessionToken) return;
+    
+    try {
+      const { error } = await supabase.rpc('admin_make_user_admin', {
+        admin_token: adminSessionToken,
+        target_user_id: userId
+      });
+      
+      if (error) throw error;
+      toast.success('User promoted to admin successfully');
+      fetchUsers();
+    } catch (error) {
+      console.error('Error making user admin:', error);
+      toast.error('Failed to make user admin');
+    }
+  };
+
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     if (!adminSessionToken) return;
     
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
+      const { error } = await supabase.rpc('admin_update_order_status', {
+        admin_token: adminSessionToken,
+        p_order_id: orderId,
+        p_status: newStatus
+      });
       
-      if (error) {
-        console.error('Error updating order status:', error);
-        toast.error('Failed to update order status');
-        return;
-      }
-      
+      if (error) throw error;
       toast.success('Order status updated successfully');
-      fetchOrders(); // Refresh data
+      fetchOrders();
     } catch (error) {
-      console.error('Error in updateOrderStatus:', error);
+      console.error('Error updating order status:', error);
       toast.error('Failed to update order status');
+    }
+  };
+
+  const upsertProduct = async (productData: {
+    name: string;
+    type: string;
+    price: number;
+    stock_quantity?: number;
+    description?: string;
+    image_url?: string;
+    sensors?: string[];
+  }, productId?: string) => {
+    if (!adminSessionToken) return;
+    
+    try {
+      const { data, error } = await supabase.rpc('admin_upsert_product', {
+        admin_token: adminSessionToken,
+        p_name: productData.name,
+        p_type: productData.type,
+        p_price: productData.price,
+        p_stock_quantity: productData.stock_quantity || 0,
+        p_description: productData.description,
+        p_image_url: productData.image_url,
+        p_sensors: productData.sensors || [],
+        p_id: productId || null
+      });
+      
+      if (error) throw error;
+      toast.success(productId ? 'Product updated successfully' : 'Product created successfully');
+      fetchProducts();
+      return data;
+    } catch (error) {
+      console.error('Error upserting product:', error);
+      toast.error('Failed to save product');
+    }
+  };
+
+  const deleteProduct = async (productId: string) => {
+    if (!adminSessionToken) return;
+    
+    try {
+      const { error } = await supabase.rpc('admin_delete_product', {
+        admin_token: adminSessionToken,
+        p_id: productId
+      });
+      
+      if (error) throw error;
+      toast.success('Product deleted successfully');
+      fetchProducts();
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error('Failed to delete product');
     }
   };
 
@@ -323,31 +321,17 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      const updateData: any = { 
-        status: newStatus,
-        updated_at: new Date().toISOString()
-      };
+      const { error } = await supabase.rpc('admin_set_blog_status', {
+        admin_token: adminSessionToken,
+        blog_id: blogId,
+        new_status: newStatus
+      });
       
-      // If approving, set published_at
-      if (newStatus === 'published') {
-        updateData.published_at = new Date().toISOString();
-      }
-
-      const { error } = await supabase
-        .from('blog_posts')
-        .update(updateData)
-        .eq('id', blogId);
-      
-      if (error) {
-        console.error('Error updating blog status:', error);
-        toast.error('Failed to update blog status');
-        return;
-      }
-      
+      if (error) throw error;
       toast.success('Blog status updated successfully');
-      fetchBlogs(); // Refresh data
+      fetchBlogs();
     } catch (error) {
-      console.error('Error in updateBlogStatus:', error);
+      console.error('Error updating blog status:', error);
       toast.error('Failed to update blog status');
     }
   };
@@ -356,53 +340,20 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      let result;
+      const { data, error } = await supabase.rpc('admin_upsert_blog', {
+        admin_token: adminSessionToken,
+        blog_title: title,
+        blog_content: content,
+        blog_status: status,
+        blog_id: blogId || null
+      });
       
-      if (blogId) {
-        // Update existing blog
-        const { data, error } = await supabase
-          .from('blog_posts')
-          .update({ 
-            title, 
-            content, 
-            status, 
-            updated_at: new Date().toISOString() 
-          })
-          .eq('id', blogId)
-          .select()
-          .single();
-          
-        if (error) throw error;
-        result = data;
-      } else {
-        // Create new blog - get first admin user as author
-        const { data: adminUser } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .eq('role', 'admin')
-          .limit(1)
-          .single();
-
-        const { data, error } = await supabase
-          .from('blog_posts')
-          .insert({ 
-            title, 
-            content, 
-            status, 
-            author_id: adminUser?.user_id || '00000000-0000-0000-0000-000000000000'
-          })
-          .select()
-          .single();
-          
-        if (error) throw error;
-        result = data;
-      }
-      
+      if (error) throw error;
       toast.success(blogId ? 'Blog updated successfully' : 'Blog created successfully');
-      fetchBlogs(); // Refresh data
-      return result;
+      fetchBlogs();
+      return data;
     } catch (error) {
-      console.error('Error in upsertBlog:', error);
+      console.error('Error upserting blog:', error);
       toast.error('Failed to save blog');
     }
   };
@@ -411,36 +362,24 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // Delete blog comments first
-      await supabase
-        .from('blog_comments')
-        .delete()
-        .eq('post_id', blogId);
+      const { error } = await supabase.rpc('admin_delete_blog', {
+        admin_token: adminSessionToken,
+        blog_id: blogId
+      });
       
-      // Delete blog
-      const { error } = await supabase
-        .from('blog_posts')
-        .delete()
-        .eq('id', blogId);
-      
-      if (error) {
-        console.error('Error deleting blog:', error);
-        toast.error('Failed to delete blog');
-        return;
-      }
-      
+      if (error) throw error;
       toast.success('Blog deleted successfully');
-      fetchBlogs(); // Refresh data
+      fetchBlogs();
     } catch (error) {
-      console.error('Error in deleteBlog:', error);
+      console.error('Error deleting blog:', error);
       toast.error('Failed to delete blog');
     }
   };
 
   const upsertWebinar = async (
-    title: string, 
-    description: string, 
-    hostName: string, 
+    title: string,
+    description: string,
+    hostName: string,
     scheduledDate: string,
     status: string = 'upcoming',
     durationMinutes: number = 60,
@@ -452,57 +391,26 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      let result;
+      const { data, error } = await supabase.rpc('admin_upsert_webinar', {
+        admin_token: adminSessionToken,
+        webinar_title: title,
+        webinar_description: description,
+        webinar_host_name: hostName,
+        webinar_scheduled_date: scheduledDate,
+        webinar_status: status,
+        webinar_duration_minutes: durationMinutes,
+        webinar_max_participants: maxParticipants,
+        webinar_zoom_link: zoomLink,
+        webinar_recording_url: recordingUrl,
+        webinar_id: webinarId || null
+      });
       
-      if (webinarId) {
-        // Update existing webinar
-        const { data, error } = await supabase
-          .from('webinars')
-          .update({
-            title,
-            description,
-            host_name: hostName,
-            scheduled_date: scheduledDate,
-            duration_minutes: durationMinutes,
-            max_participants: maxParticipants,
-            status,
-            zoom_meeting_link: zoomLink,
-            recording_url: recordingUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', webinarId)
-          .select()
-          .single();
-          
-        if (error) throw error;
-        result = data;
-      } else {
-        // Create new webinar
-        const { data, error } = await supabase
-          .from('webinars')
-          .insert({
-            title,
-            description,
-            host_name: hostName,
-            scheduled_date: scheduledDate,
-            duration_minutes: durationMinutes,
-            max_participants: maxParticipants,
-            status,
-            zoom_meeting_link: zoomLink,
-            recording_url: recordingUrl
-          })
-          .select()
-          .single();
-          
-        if (error) throw error;
-        result = data;
-      }
-      
+      if (error) throw error;
       toast.success(webinarId ? 'Webinar updated successfully' : 'Webinar created successfully');
-      fetchWebinars(); // Refresh data
-      return result;
+      fetchWebinars();
+      return data;
     } catch (error) {
-      console.error('Error in upsertWebinar:', error);
+      console.error('Error upserting webinar:', error);
       toast.error('Failed to save webinar');
     }
   };
@@ -511,28 +419,16 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // Delete webinar registrations first
-      await supabase
-        .from('webinar_registrations')
-        .delete()
-        .eq('webinar_id', webinarId);
+      const { error } = await supabase.rpc('admin_delete_webinar', {
+        admin_token: adminSessionToken,
+        webinar_id: webinarId
+      });
       
-      // Delete webinar
-      const { error } = await supabase
-        .from('webinars')
-        .delete()
-        .eq('id', webinarId);
-      
-      if (error) {
-        console.error('Error deleting webinar:', error);
-        toast.error('Failed to delete webinar');
-        return;
-      }
-      
+      if (error) throw error;
       toast.success('Webinar deleted successfully');
-      fetchWebinars(); // Refresh data
+      fetchWebinars();
     } catch (error) {
-      console.error('Error in deleteWebinar:', error);
+      console.error('Error deleting webinar:', error);
       toast.error('Failed to delete webinar');
     }
   };
@@ -541,49 +437,36 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      const { error } = await supabase
-        .from('community_discussions')
-        .update({ 
-          status: newStatus, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', discussionId);
+      const { error } = await supabase.rpc('admin_update_discussion_status', {
+        admin_token: adminSessionToken,
+        discussion_id: discussionId,
+        new_status: newStatus
+      });
       
-      if (error) {
-        console.error('Error updating discussion status:', error);
-        toast.error('Failed to update discussion status');
-        return;
-      }
-      
+      if (error) throw error;
       toast.success('Discussion status updated successfully');
-      fetchDiscussions(); // Refresh data
+      fetchDiscussions();
     } catch (error) {
-      console.error('Error in updateDiscussionStatus:', error);
+      console.error('Error updating discussion status:', error);
       toast.error('Failed to update discussion status');
     }
   };
 
-  const makeUserAdmin = async (userId: string) => {
+  const deleteDiscussion = async (discussionId: string) => {
     if (!adminSessionToken) return;
     
     try {
-      // Insert admin role if it doesn't exist
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({ user_id: userId, role: 'admin' })
-        .select();
+      const { error } = await supabase.rpc('admin_delete_discussion', {
+        admin_token: adminSessionToken,
+        discussion_id: discussionId
+      });
       
-      if (error && !error.message.includes('duplicate')) {
-        console.error('Error making user admin:', error);
-        toast.error('Failed to make user admin');
-        return;
-      }
-      
-      toast.success('User promoted to admin successfully');
-      fetchUsers(); // Refresh data
+      if (error) throw error;
+      toast.success('Discussion deleted successfully');
+      fetchDiscussions();
     } catch (error) {
-      console.error('Error in makeUserAdmin:', error);
-      toast.error('Failed to make user admin');
+      console.error('Error deleting discussion:', error);
+      toast.error('Failed to delete discussion');
     }
   };
 
@@ -591,47 +474,34 @@ export const useAdminData = () => {
   useEffect(() => {
     if (!adminSessionToken) return;
 
-    // Set up real-time subscriptions for all admin tables
     const ordersChannel = supabase
       .channel('admin-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        fetchOrders();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchOrders)
       .subscribe();
 
     const blogsChannel = supabase
       .channel('admin-blogs')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_posts' }, () => {
-        fetchBlogs();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_posts' }, fetchBlogs)
       .subscribe();
 
     const webinarsChannel = supabase
       .channel('admin-webinars')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'webinars' }, () => {
-        fetchWebinars();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'webinars' }, fetchWebinars)
       .subscribe();
 
     const discussionsChannel = supabase
       .channel('admin-discussions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_discussions' }, () => {
-        fetchDiscussions();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'community_discussions' }, fetchDiscussions)
       .subscribe();
 
-    const profilesChannel = supabase
-      .channel('admin-profiles')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-        fetchUsers();
-      })
+    const productsChannel = supabase
+      .channel('admin-products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchProducts)
       .subscribe();
 
     const rolesChannel = supabase
       .channel('admin-roles')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles' }, () => {
-        fetchUsers();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles' }, fetchUsers)
       .subscribe();
 
     return () => {
@@ -639,7 +509,7 @@ export const useAdminData = () => {
       supabase.removeChannel(blogsChannel);
       supabase.removeChannel(webinarsChannel);
       supabase.removeChannel(discussionsChannel);
-      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(productsChannel);
       supabase.removeChannel(rolesChannel);
     };
   }, [adminSessionToken]);
@@ -651,32 +521,46 @@ export const useAdminData = () => {
       Promise.all([
         fetchUsers(),
         fetchOrders(),
+        fetchProducts(),
         fetchBlogs(),
         fetchWebinars(),
         fetchDiscussions(),
+        fetchDashboardCounts(),
       ]).finally(() => setLoading(false));
     }
   }, [adminSessionToken]);
 
   return {
+    // Data
     users,
     orders,
     blogs,
     webinars,
     discussions,
+    products,
+    dashboardCounts,
     loading,
+    
+    // Fetch functions
     fetchUsers,
     fetchOrders,
+    fetchProducts,
     fetchBlogs,
     fetchWebinars,
     fetchDiscussions,
+    fetchDashboardCounts,
+    
+    // Action functions
+    makeUserAdmin,
     updateOrderStatus,
+    upsertProduct,
+    deleteProduct,
     updateBlogStatus,
     upsertBlog,
     deleteBlog,
     upsertWebinar,
     deleteWebinar,
     updateDiscussionStatus,
-    makeUserAdmin,
+    deleteDiscussion,
   };
 };

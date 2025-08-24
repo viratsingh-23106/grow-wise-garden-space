@@ -1,203 +1,98 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { useAdmin } from '@/contexts/AdminContext';
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Plus, Edit, Trash2, Search, Package, IndianRupee } from "lucide-react";
+import { useAdminData, AdminProduct } from "@/hooks/useAdminData";
 
-interface Product {
-  id: string;
-  name: string;
-  type: string;
-  description: string;
-  price: number;
-  stock_quantity: number;
-  image_url: string;
-  sensors: string[];
-  guidance_steps: number;
-  created_at: string;
-}
-
-const ProductsCRUD: React.FC = () => {
-  const { logAdminActivity } = useAdmin();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+const ProductsCRUD = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const { products, loading, upsertProduct, deleteProduct } = useAdminData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-
+  const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     type: '',
-    description: '',
     price: 0,
     stock_quantity: 0,
+    description: '',
     image_url: '',
-    sensors: [] as string[],
-    guidance_steps: 0,
+    sensors: [] as string[]
   });
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    let filtered = products;
-
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.type.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (filterType !== 'all') {
-      filtered = filtered.filter(product => product.type === filterType);
-    }
-
-    setFilteredProducts(filtered);
-  }, [products, searchTerm, filterType]);
-
-  const fetchProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch products",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetForm = () => {
+  const handleCreate = () => {
     setFormData({
       name: '',
       type: '',
-      description: '',
       price: 0,
       stock_quantity: 0,
+      description: '',
       image_url: '',
-      sensors: [],
-      guidance_steps: 0,
+      sensors: []
     });
     setSelectedProduct(null);
     setIsEditing(false);
-  };
-
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product);
-    setFormData({
-      name: product.name,
-      type: product.type,
-      description: product.description || '',
-      price: product.price,
-      stock_quantity: product.stock_quantity || 0,
-      image_url: product.image_url || '',
-      sensors: product.sensors || [],
-      guidance_steps: product.guidance_steps || 0,
-    });
-    setIsEditing(true);
     setIsDialogOpen(true);
   };
 
-  const handleCreate = () => {
-    resetForm();
+  const handleEdit = (product: AdminProduct) => {
+    setFormData({
+      name: product.name,
+      type: product.type,
+      price: product.price,
+      stock_quantity: product.stock_quantity,
+      description: product.description || '',
+      image_url: product.image_url || '',
+      sensors: product.sensors || []
+    });
+    setSelectedProduct(product);
+    setIsEditing(true);
     setIsDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    try {
-      if (isEditing && selectedProduct) {
-        const { error } = await supabase
-          .from('products')
-          .update(formData)
-          .eq('id', selectedProduct.id);
-
-        if (error) throw error;
-
-        await logAdminActivity('UPDATE', 'products', selectedProduct.id, formData);
-        toast({
-          title: "Success",
-          description: "Product updated successfully",
-        });
-      } else {
-        const { error } = await supabase
-          .from('products')
-          .insert([formData]);
-
-        if (error) throw error;
-
-        await logAdminActivity('CREATE', 'products', undefined, formData);
-        toast({
-          title: "Success",
-          description: "Product created successfully",
-        });
-      }
-
-      setIsDialogOpen(false);
-      resetForm();
-      fetchProducts();
-    } catch (error) {
-      console.error('Error saving product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save product",
-        variant: "destructive",
-      });
+    if (!formData.name || !formData.type || formData.price <= 0) {
+      return;
     }
+
+    await upsertProduct(
+      {
+        name: formData.name,
+        type: formData.type,
+        price: formData.price,
+        stock_quantity: formData.stock_quantity,
+        description: formData.description,
+        image_url: formData.image_url,
+        sensors: formData.sensors
+      },
+      isEditing ? selectedProduct?.id : undefined
+    );
+    
+    setIsDialogOpen(false);
   };
 
-  const handleDelete = async (product: Product) => {
+  const handleDelete = async (product: AdminProduct) => {
     if (!confirm(`Are you sure you want to delete "${product.name}"?`)) return;
-
-    try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', product.id);
-
-      if (error) throw error;
-
-      await logAdminActivity('DELETE', 'products', product.id, { name: product.name });
-      toast({
-        title: "Success",
-        description: "Product deleted successfully",
-      });
-      fetchProducts();
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete product",
-        variant: "destructive",
-      });
-    }
+    await deleteProduct(product.id);
   };
 
-  const productTypes = [...new Set(products.map(p => p.type))];
+  const handleSensorsChange = (value: string) => {
+    const sensors = value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    setFormData({ ...formData, sensors });
+  };
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return <div className="text-center p-8">Loading products...</div>;
@@ -206,14 +101,17 @@ const ProductsCRUD: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Products Management</h2>
+        <div className="flex items-center gap-2">
+          <Package className="w-6 h-6" />
+          <h2 className="text-2xl font-bold">Product Management</h2>
+          <Badge variant="secondary">{products.length} Products</Badge>
+        </div>
         <Button onClick={handleCreate} className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Add Product
         </Button>
       </div>
 
-      {/* Filters */}
       <div className="flex gap-4 flex-wrap">
         <div className="flex-1 min-w-64">
           <div className="relative">
@@ -226,63 +124,57 @@ const ProductsCRUD: React.FC = () => {
             />
           </div>
         </div>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {productTypes.map(type => (
-              <SelectItem key={type} value={type}>{type}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Products Grid */}
       <div className="grid gap-4">
         {filteredProducts.map((product) => (
           <Card key={product.id}>
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold">{product.name}</h3>
-                    <Badge variant="secondary">{product.type}</Badge>
-                  </div>
-                  <p className="text-gray-600 text-sm">{product.description}</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Price:</span>
-                      <p className="font-medium">₹{product.price}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Stock:</span>
-                      <p className="font-medium">{product.stock_quantity}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Sensors:</span>
-                      <p className="font-medium">{product.sensors?.length || 0}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Guide Steps:</span>
-                      <p className="font-medium">{product.guidance_steps || 0}</p>
-                    </div>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  {product.image_url && (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.name}
+                      className="w-12 h-12 rounded object-cover"
+                    />
+                  )}
+                  <div>
+                    <CardTitle className="text-lg">{product.name}</CardTitle>
+                    <Badge variant="outline">{product.type}</Badge>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(product)}
-                  >
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 text-lg font-semibold">
+                    <IndianRupee className="w-4 h-4" />
+                    {product.price}
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2 flex-1">
+                  <p className="text-sm text-gray-600">{product.description}</p>
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <span>Stock: {product.stock_quantity}</span>
+                    <span>Created: {new Date(product.created_at).toLocaleDateString()}</span>
+                  </div>
+                  {product.sensors && product.sensors.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {product.sensors.map((sensor, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {sensor}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 ml-4">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(product)}>
                     <Edit className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(product)}
-                  >
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(product)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
@@ -298,7 +190,6 @@ const ProductsCRUD: React.FC = () => {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -308,87 +199,81 @@ const ProductsCRUD: React.FC = () => {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Product Name</Label>
+              <div>
+                <Label>Product Name *</Label>
                 <Input
-                  id="name"
+                  placeholder="Enter product name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
+              <div>
+                <Label>Type *</Label>
                 <Input
-                  id="type"
+                  placeholder="e.g., seeds, fertilizer, tools"
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   required
                 />
               </div>
             </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Price (₹) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Stock Quantity</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={formData.stock_quantity}
+                  onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            <div>
+              <Label>Description</Label>
               <Textarea
-                id="description"
+                placeholder="Product description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="price">Price (₹)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="stock">Stock Quantity</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  min="0"
-                  value={formData.stock_quantity}
-                  onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="steps">Guidance Steps</Label>
-                <Input
-                  id="steps"
-                  type="number"
-                  min="0"
-                  value={formData.guidance_steps}
-                  onChange={(e) => setFormData({ ...formData, guidance_steps: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="image_url">Image URL</Label>
+            <div>
+              <Label>Image URL</Label>
               <Input
-                id="image_url"
-                type="url"
+                placeholder="https://example.com/image.jpg"
                 value={formData.image_url}
                 onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
               />
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-              >
+            <div>
+              <Label>Sensors (comma-separated)</Label>
+              <Input
+                placeholder="temperature, humidity, soil_moisture"
+                value={formData.sensors.join(', ')}
+                onChange={(e) => handleSensorsChange(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
               <Button type="submit">
