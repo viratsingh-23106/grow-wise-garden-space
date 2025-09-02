@@ -987,6 +987,119 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_blog: {
+        Args: { admin_token: string; blog_id: string }
+        Returns: undefined
+      }
+      admin_delete_discussion: {
+        Args: { admin_token: string; discussion_id: string }
+        Returns: undefined
+      }
+      admin_delete_product: {
+        Args: { admin_token: string; p_id: string }
+        Returns: undefined
+      }
+      admin_delete_webinar: {
+        Args: { admin_token: string; webinar_id: string }
+        Returns: undefined
+      }
+      admin_get_dashboard_counts: {
+        Args: { admin_token: string }
+        Returns: {
+          active_discussions: number
+          pending_blogs: number
+          total_orders: number
+          total_revenue: number
+          total_users: number
+          total_webinars: number
+        }[]
+      }
+      admin_get_orders: {
+        Args: { admin_token: string }
+        Returns: {
+          created_at: string
+          id: string
+          items_count: number
+          shipping_address: Json
+          status: string
+          total_amount: number
+          user_email: string
+          user_id: string
+        }[]
+      }
+      admin_get_users: {
+        Args: { admin_token: string }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          role: string
+          subscribed: boolean
+          subscription_end: string
+          subscription_tier: string
+        }[]
+      }
+      admin_list_blogs: {
+        Args: { admin_token: string }
+        Returns: {
+          author_email: string
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          published_at: string
+          status: string
+          title: string
+          updated_at: string
+        }[]
+      }
+      admin_list_discussions: {
+        Args: { admin_token: string }
+        Returns: {
+          author_email: string
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }[]
+      }
+      admin_list_webinars: {
+        Args: { admin_token: string }
+        Returns: {
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          host_name: string
+          id: string
+          max_participants: number | null
+          recording_url: string | null
+          scheduled_date: string
+          status: string
+          title: string
+          updated_at: string
+          zoom_meeting_link: string | null
+        }[]
+      }
+      admin_make_user_admin: {
+        Args: { admin_token: string; target_user_id: string }
+        Returns: undefined
+      }
+      admin_set_blog_status: {
+        Args: { admin_token: string; blog_id: string; new_status: string }
+        Returns: undefined
+      }
+      admin_update_discussion_status: {
+        Args: { admin_token: string; discussion_id: string; new_status: string }
+        Returns: undefined
+      }
+      admin_update_order_status: {
+        Args: { admin_token: string; p_order_id: string; p_status: string }
+        Returns: undefined
+      }
       admin_upsert_blog: {
         Args: {
           admin_token: string
@@ -994,6 +1107,20 @@ export type Database = {
           blog_id?: string
           blog_status: string
           blog_title: string
+        }
+        Returns: string
+      }
+      admin_upsert_product: {
+        Args: {
+          admin_token: string
+          p_description?: string
+          p_id?: string
+          p_image_url?: string
+          p_name: string
+          p_price: number
+          p_sensors?: string[]
+          p_stock_quantity?: number
+          p_type: string
         }
         Returns: string
       }
