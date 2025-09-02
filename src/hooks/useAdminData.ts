@@ -104,12 +104,11 @@ export const useAdminData = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Fetch functions using secure admin RPCs - bypassing TypeScript temporarily
+  // Fetch functions using secure admin RPCs
   const fetchUsers = async () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { data, error } = await supabase.rpc('admin_get_users', {
         admin_token: adminSessionToken
       });
@@ -126,7 +125,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { data, error } = await supabase.rpc('admin_get_orders', {
         admin_token: adminSessionToken
       });
@@ -160,7 +158,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { data, error } = await supabase.rpc('admin_list_blogs', {
         admin_token: adminSessionToken
       });
@@ -177,7 +174,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { data, error } = await supabase.rpc('admin_list_webinars', {
         admin_token: adminSessionToken
       });
@@ -194,7 +190,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { data, error } = await supabase.rpc('admin_list_discussions', {
         admin_token: adminSessionToken
       });
@@ -211,7 +206,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { data, error } = await supabase.rpc('admin_get_dashboard_counts', {
         admin_token: adminSessionToken
       });
@@ -239,7 +233,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { error } = await supabase.rpc('admin_make_user_admin', {
         admin_token: adminSessionToken,
         target_user_id: userId
@@ -258,7 +251,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { error } = await supabase.rpc('admin_update_order_status', {
         admin_token: adminSessionToken,
         p_order_id: orderId,
@@ -286,7 +278,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { data, error } = await supabase.rpc('admin_upsert_product', {
         admin_token: adminSessionToken,
         p_name: productData.name,
@@ -313,7 +304,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { error } = await supabase.rpc('admin_delete_product', {
         admin_token: adminSessionToken,
         p_id: productId
@@ -332,7 +322,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { error } = await supabase.rpc('admin_set_blog_status', {
         admin_token: adminSessionToken,
         blog_id: blogId,
@@ -352,7 +341,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { data, error } = await supabase.rpc('admin_upsert_blog', {
         admin_token: adminSessionToken,
         blog_title: title,
@@ -375,7 +363,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { error } = await supabase.rpc('admin_delete_blog', {
         admin_token: adminSessionToken,
         blog_id: blogId
@@ -405,7 +392,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { data, error } = await supabase.rpc('admin_upsert_webinar', {
         admin_token: adminSessionToken,
         webinar_title: title,
@@ -434,7 +420,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { error } = await supabase.rpc('admin_delete_webinar', {
         admin_token: adminSessionToken,
         webinar_id: webinarId
@@ -453,7 +438,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { error } = await supabase.rpc('admin_update_discussion_status', {
         admin_token: adminSessionToken,
         discussion_id: discussionId,
@@ -473,7 +457,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // @ts-ignore - Using admin RPC function
       const { error } = await supabase.rpc('admin_delete_discussion', {
         admin_token: adminSessionToken,
         discussion_id: discussionId
