@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Search, Package, IndianRupee } from "lucide-react";
 import { useAdminData, AdminProduct } from "@/hooks/useAdminData";
 
@@ -210,12 +211,19 @@ const ProductsCRUD = () => {
               </div>
               <div>
                 <Label>Type *</Label>
-                <Input
-                  placeholder="e.g., seeds, fertilizer, tools"
+                <Select
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  required
-                />
+                  onValueChange={(value) => setFormData({ ...formData, type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select product type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="seeds">Seeds</SelectItem>
+                    <SelectItem value="plants">Plants</SelectItem>
+                    <SelectItem value="tools">Tools</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
