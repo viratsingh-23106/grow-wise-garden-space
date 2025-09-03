@@ -118,7 +118,7 @@ const Dashboard = () => {
 
           {/* Main Dashboard Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="sensors">Live Sensors</TabsTrigger>
               <TabsTrigger value="alerts">Alerts</TabsTrigger>
@@ -127,7 +127,7 @@ const Dashboard = () => {
 
             <TabsContent value="overview" className="space-y-6">
               {/* Controls */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center flex-wrap">
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium">Time Range:</label>
                   <Select value={timeRange} onValueChange={setTimeRange}>
@@ -246,7 +246,7 @@ const Dashboard = () => {
                   <CardTitle>Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {isSubscribed ? (
                       <>
                         <Button className="h-20 flex-col gap-2">

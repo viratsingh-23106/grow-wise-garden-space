@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Search, Package, IndianRupee } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Package, IndianRupee, BookOpen, Video, FileText } from "lucide-react";
 import { useAdminData, AdminProduct } from "@/hooks/useAdminData";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProductsCRUD = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,7 +25,16 @@ const ProductsCRUD = () => {
     stock_quantity: 0,
     description: '',
     image_url: '',
-    sensors: [] as string[]
+    sensors: [] as string[],
+    growthGuideTitle: '',
+    growthGuideDescription: '',
+    guideSteps: [{
+      title: '',
+      description: '',
+      video_url: '',
+      document_url: '',
+      estimated_duration: ''
+    }]
   });
 
   const handleCreate = () => {
@@ -35,7 +45,16 @@ const ProductsCRUD = () => {
       stock_quantity: 0,
       description: '',
       image_url: '',
-      sensors: []
+      sensors: [],
+      growthGuideTitle: '',
+      growthGuideDescription: '',
+      guideSteps: [{
+        title: '',
+        description: '',
+        video_url: '',
+        document_url: '',
+        estimated_duration: ''
+      }]
     });
     setSelectedProduct(null);
     setIsEditing(false);
@@ -50,7 +69,16 @@ const ProductsCRUD = () => {
       stock_quantity: product.stock_quantity,
       description: product.description || '',
       image_url: product.image_url || '',
-      sensors: product.sensors || []
+      sensors: product.sensors || [],
+      growthGuideTitle: '',
+      growthGuideDescription: '',
+      guideSteps: [{
+        title: '',
+        description: '',
+        video_url: '',
+        document_url: '',
+        estimated_duration: ''
+      }]
     });
     setSelectedProduct(product);
     setIsEditing(true);
@@ -64,20 +92,62 @@ const ProductsCRUD = () => {
       return;
     }
 
-    await upsertProduct(
-      {
-        name: formData.name,
-        type: formData.type,
-        price: formData.price,
-        stock_quantity: formData.stock_quantity,
-        description: formData.description,
-        image_url: formData.image_url,
-        sensors: formData.sensors
-      },
-      isEditing ? selectedProduct?.id : undefined
-    );
-    
-    setIsDialogOpen(false);
+    try {
+      // Create or update product
+      const productId = await upsertProduct(
+        {
+          name: formData.name,
+          type: formData.type,
+          price: formData.price,
+          stock_quantity: formData.stock_quantity,
+          description: formData.description,
+          image_url: formData.image_url,
+          sensors: formData.sensors
+        },
+        isEditing ? selectedProduct?.id : undefined
+      );
+
+      // Create growth guide if provided
+      if (formData.growthGuideTitle && productId) {
+        const { data: guide, error: guideError } = await supabase
+          .from('growth_guides')
+          .insert({
+            product_id: productId,
+            title: formData.growthGuideTitle,
+            description: formData.growthGuideDescription,
+            total_steps: formData.guideSteps.length
+          })
+          .select()
+          .single();
+
+        if (guideError) throw guideError;
+
+        // Create guide steps
+        const steps = formData.guideSteps
+          .filter(step => step.title.trim())
+          .map((step, index) => ({
+            guide_id: guide.id,
+            step_number: index + 1,
+            title: step.title,
+            description: step.description,
+            video_url: step.video_url || null,
+            document_url: step.document_url || null,
+            estimated_duration: step.estimated_duration || null
+          }));
+
+        if (steps.length > 0) {
+          const { error: stepsError } = await supabase
+            .from('guide_steps')
+            .insert(steps);
+
+          if (stepsError) throw stepsError;
+        }
+      }
+      
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving product and guide:', error);
+    }
   };
 
   const handleDelete = async (product: AdminProduct) => {
@@ -101,20 +171,20 @@ const ProductsCRUD = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-2">
           <Package className="w-6 h-6" />
-          <h2 className="text-2xl font-bold">Product Management</h2>
+          <h2 className="text-xl sm:text-2xl font-bold">Product Management</h2>
           <Badge variant="secondary">{products.length} Products</Badge>
         </div>
-        <Button onClick={handleCreate} className="flex items-center gap-2">
+        <Button onClick={handleCreate} className="flex items-center gap-2 w-full sm:w-auto">
           <Plus className="w-4 h-4" />
           Add Product
         </Button>
       </div>
 
       <div className="flex gap-4 flex-wrap">
-        <div className="flex-1 min-w-64">
+        <div className="flex-1 min-w-0 sm:min-w-64">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
@@ -192,7 +262,7 @@ const ProductsCRUD = () => {
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {isEditing ? 'Edit Product' : 'Create New Product'}
@@ -278,6 +348,152 @@ const ProductsCRUD = () => {
                 value={formData.sensors.join(', ')}
                 onChange={(e) => handleSensorsChange(e.target.value)}
               />
+            </div>
+
+            {/* Growth Guide Section */}
+            <div className="space-y-4 border-t pt-6">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                <h3 className="text-lg font-semibold">Growing Guide (Optional)</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label>Guide Title</Label>
+                  <Input
+                    placeholder="How to grow this product"
+                    value={formData.growthGuideTitle}
+                    onChange={(e) => setFormData({ ...formData, growthGuideTitle: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Guide Description</Label>
+                  <Textarea
+                    placeholder="Brief description of the growing guide"
+                    value={formData.growthGuideDescription}
+                    onChange={(e) => setFormData({ ...formData, growthGuideDescription: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              {/* Guide Steps */}
+              <div className="space-y-4">
+                <Label>Guide Steps</Label>
+                {formData.guideSteps.map((step, index) => (
+                  <div key={index} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Step {index + 1}</h4>
+                      {formData.guideSteps.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newSteps = formData.guideSteps.filter((_, i) => i !== index);
+                            setFormData({ ...formData, guideSteps: newSteps });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <Label>Step Title</Label>
+                        <Input
+                          placeholder="Step title"
+                          value={step.title}
+                          onChange={(e) => {
+                            const newSteps = [...formData.guideSteps];
+                            newSteps[index].title = e.target.value;
+                            setFormData({ ...formData, guideSteps: newSteps });
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <Label>Step Description</Label>
+                        <Textarea
+                          placeholder="Detailed step description"
+                          value={step.description}
+                          onChange={(e) => {
+                            const newSteps = [...formData.guideSteps];
+                            newSteps[index].description = e.target.value;
+                            setFormData({ ...formData, guideSteps: newSteps });
+                          }}
+                          rows={2}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="flex items-center gap-1">
+                            <Video className="h-4 w-4" />
+                            Video URL
+                          </Label>
+                          <Input
+                            placeholder="https://youtube.com/watch?v=..."
+                            value={step.video_url}
+                            onChange={(e) => {
+                              const newSteps = [...formData.guideSteps];
+                              newSteps[index].video_url = e.target.value;
+                              setFormData({ ...formData, guideSteps: newSteps });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="flex items-center gap-1">
+                            <FileText className="h-4 w-4" />
+                            Document URL
+                          </Label>
+                          <Input
+                            placeholder="https://example.com/guide.pdf"
+                            value={step.document_url}
+                            onChange={(e) => {
+                              const newSteps = [...formData.guideSteps];
+                              newSteps[index].document_url = e.target.value;
+                              setFormData({ ...formData, guideSteps: newSteps });
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Estimated Duration</Label>
+                        <Input
+                          placeholder="e.g., 2 weeks, 30 days"
+                          value={step.estimated_duration}
+                          onChange={(e) => {
+                            const newSteps = [...formData.guideSteps];
+                            newSteps[index].estimated_duration = e.target.value;
+                            setFormData({ ...formData, guideSteps: newSteps });
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setFormData({
+                      ...formData,
+                      guideSteps: [...formData.guideSteps, {
+                        title: '',
+                        description: '',
+                        video_url: '',
+                        document_url: '',
+                        estimated_duration: ''
+                      }]
+                    });
+                  }}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Another Step
+                </Button>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
