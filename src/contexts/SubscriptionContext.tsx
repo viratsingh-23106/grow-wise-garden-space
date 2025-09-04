@@ -9,6 +9,7 @@ interface SubscriptionContextType {
   trialEnded: boolean;
   loading: boolean;
   checkSubscription: () => Promise<void>;
+  refreshSubscription: () => Promise<void>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -82,6 +83,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  const refreshSubscription = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    await checkSubscription();
+  };
+
   useEffect(() => {
     if (user) {
       checkSubscription();
@@ -96,6 +104,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     trialEnded,
     loading,
     checkSubscription,
+    refreshSubscription,
   };
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

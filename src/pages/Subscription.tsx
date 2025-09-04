@@ -121,11 +121,13 @@ const Subscription = () => {
             console.log('Payment verified successfully:', verifyData);
             toast({
               title: "Subscription Activated!",
-              description: "Your subscription has been activated successfully.",
+              description: "Redirecting to your dashboard...",
             });
             
-            // Refresh the page to update subscription status
-            window.location.reload();
+            // Wait a moment for the toast to show, then redirect to dashboard
+            setTimeout(() => {
+              navigate('/dashboard');
+            }, 1000);
           } catch (error) {
             console.error('Error verifying payment:', error);
             toast({

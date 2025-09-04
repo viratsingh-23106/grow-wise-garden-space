@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Navigate } from 'react-router-dom';
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Thermometer, Droplets, Gauge, Sun, AlertTriangle, TrendingUp, TrendingDown, Minus, Settings, Download, Users, Zap } from 'lucide-react';
+import { Thermometer, Droplets, Gauge, Sun, AlertTriangle, TrendingUp, TrendingDown, Minus, Settings, Download, Users, Zap, Crown, X } from 'lucide-react';
 import { Separator } from "@/components/ui/separator";
 import NavBar from '@/components/NavBar';
 import RealTimeSensorData from '@/components/dashboard/RealTimeSensorData';
@@ -25,13 +25,21 @@ const cropTypes = [
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { isSubscribed, trialEnded, loading: subscriptionLoading } = useSubscription();
+  const { isSubscribed, trialEnded, loading: subscriptionLoading, refreshSubscription } = useSubscription();
   const [timeRange, setTimeRange] = useState("24h");
   const [selectedDevice, setSelectedDevice] = useState("all");
   const [selectedCrop, setSelectedCrop] = useState("all");
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
 
   const { metrics, devices, alerts, loading: dashboardLoading } = useDashboardData(selectedDevice, timeRange);
   const canAccessDashboard = isSubscribed || !trialEnded;
+
+  // Refresh subscription when component mounts (useful after payment)
+  useEffect(() => {
+    if (user) {
+      refreshSubscription();
+    }
+  }, [user, refreshSubscription]);
 
   // Redirect to auth if not logged in
   if (!user) {
@@ -115,6 +123,42 @@ const Dashboard = () => {
               Monitor your crops with real-time IoT sensor data
             </p>
           </div>
+
+          {/* Trial Upgrade Banner */}
+          {!isSubscribed && !trialEnded && showUpgradeBanner && (
+            <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-amber-100 rounded-full">
+                      <Crown className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-amber-800">Unlock Pro Features</p>
+                      <p className="text-sm text-amber-700">
+                        Upgrade to Premium for advanced analytics, unlimited sensors, and automation features
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      onClick={() => window.location.href = '/subscription'}
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                    >
+                      Upgrade Now
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowUpgradeBanner(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Main Dashboard Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
