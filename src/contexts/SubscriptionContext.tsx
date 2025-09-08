@@ -86,8 +86,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const refreshSubscription = async () => {
     if (!user) return;
     
+    console.log('Refreshing subscription status...');
     setLoading(true);
     await checkSubscription();
+    console.log('Subscription status refreshed');
   };
 
   useEffect(() => {

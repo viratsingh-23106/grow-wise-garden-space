@@ -12,7 +12,7 @@ import { toast } from "@/hooks/use-toast";
 
 const Subscription = () => {
   const { user } = useAuth();
-  const { isSubscribed, subscriptionTier, loading: subscriptionLoading } = useSubscription();
+  const { isSubscribed, subscriptionTier, loading: subscriptionLoading, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
@@ -104,7 +104,8 @@ const Subscription = () => {
               body: {
                 paymentId: response.razorpay_payment_id,
                 orderId: response.razorpay_order_id,
-                signature: response.razorpay_signature
+                signature: response.razorpay_signature,
+                planType: planType
               }
             });
 
@@ -119,6 +120,10 @@ const Subscription = () => {
             }
 
             console.log('Payment verified successfully:', verifyData);
+            
+            // Immediately refresh subscription status
+            await refreshSubscription();
+            
             toast({
               title: "Subscription Activated!",
               description: "Redirecting to your dashboard...",
@@ -126,7 +131,7 @@ const Subscription = () => {
             
             // Wait a moment for the toast to show, then redirect to dashboard
             setTimeout(() => {
-              navigate('/dashboard');
+              navigate('/dashboard', { replace: true });
             }, 1000);
           } catch (error) {
             console.error('Error verifying payment:', error);
