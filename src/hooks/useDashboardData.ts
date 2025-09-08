@@ -56,7 +56,7 @@ interface DashboardMetric {
   icon: any;
 }
 
-export const useDashboardData = (selectedDevice: string, timeRange: string) => {
+export const useDashboardData = (selectedDevice: string, timeRange: string, enabled: boolean = true) => {
   const [metrics, setMetrics] = useState<DashboardMetric[]>([]);
   const [devices, setDevices] = useState<UserSensor[]>([]);
   const [alerts, setAlerts] = useState<SensorAlert[]>([]);
@@ -244,6 +244,10 @@ export const useDashboardData = (selectedDevice: string, timeRange: string) => {
   };
 
   useEffect(() => {
+    if (!enabled || !user) {
+      setLoading(false);
+      return;
+    }
     fetchDashboardData();
 
     // Set up real-time subscriptions
@@ -283,7 +287,7 @@ export const useDashboardData = (selectedDevice: string, timeRange: string) => {
       supabase.removeChannel(sensorDataChannel);
       supabase.removeChannel(alertsChannel);
     };
-  }, [user, selectedDevice, timeRange]);
+  }, [user, selectedDevice, timeRange, enabled]);
 
   return { metrics, devices, alerts, loading };
 };

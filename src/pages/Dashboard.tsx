@@ -32,25 +32,22 @@ const Dashboard = () => {
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
   const [optimisticPro, setOptimisticPro] = useState(false);
 
-  const { metrics, devices, alerts, loading: dashboardLoading } = useDashboardData(selectedDevice, timeRange);
   const isPro = isSubscribed || optimisticPro;
   const canAccessDashboard = isPro || !trialEnded;
 
-  // Refresh subscription when component mounts (useful after payment)
+  const { metrics, devices, alerts, loading: dashboardLoading } = useDashboardData(selectedDevice, timeRange, canAccessDashboard);
+
+  // Refresh only after checkout to avoid extra load
   useEffect(() => {
-    if (user) {
+    const flag = sessionStorage.getItem('justSubscribed');
+    if (flag && user) {
+      setOptimisticPro(true);
       refreshSubscription();
+      sessionStorage.removeItem('justSubscribed');
     }
   }, [user, refreshSubscription]);
 
-  // Optimistic Pro activation if coming right after checkout
-  useEffect(() => {
-    const flag = sessionStorage.getItem('justSubscribed');
-    if (flag) {
-      setOptimisticPro(true);
-      sessionStorage.removeItem('justSubscribed');
-    }
-  }, []);
+  
 
   // Clear optimistic flag once real subscription is confirmed
   useEffect(() => {
@@ -93,7 +90,7 @@ const Dashboard = () => {
     }
   };
 
-  if (subscriptionLoading || dashboardLoading) {
+  if (subscriptionLoading || (dashboardLoading && canAccessDashboard)) {
     return (
       <div className="min-h-screen bg-background">
         <NavBar />
