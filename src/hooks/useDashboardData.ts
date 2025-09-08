@@ -135,13 +135,19 @@ export const useDashboardData = (selectedDevice: string, timeRange: string) => {
     if (!user) return;
 
     try {
+      setLoading(true);
       const timeFilter = getTimeRangeFilter(timeRange);
 
-      // Fetch sensor data
+      // Build sensor data query (limit rows for speed)
       let sensorQuery = supabase
         .from('sensor_data')
         .select(`
-          *,
+          sensor_id,
+          temperature,
+          humidity,
+          soil_moisture,
+          light_level,
+          recorded_at,
           user_sensors!inner(
             id,
             sensor_name,
@@ -152,41 +158,36 @@ export const useDashboardData = (selectedDevice: string, timeRange: string) => {
         `)
         .eq('user_id', user.id)
         .gte('recorded_at', timeFilter)
-        .order('recorded_at', { ascending: false });
+        .order('recorded_at', { ascending: false })
+        .limit(300);
 
       if (selectedDevice !== 'all') {
         sensorQuery = sensorQuery.eq('sensor_id', selectedDevice);
       }
 
-      const { data: sensorData, error: sensorError } = await sensorQuery;
-      if (sensorError) throw sensorError;
+      // Fetch everything in parallel
+      const [sensorRes, userSensorsRes, thresholdsRes, alertsRes] = await Promise.all([
+        sensorQuery,
+        supabase.from('user_sensors').select('*').eq('user_id', user.id),
+        supabase.from('sensor_thresholds').select('*').eq('user_id', user.id),
+        supabase
+          .from('sensor_alerts')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_resolved', false)
+          .order('created_at', { ascending: false })
+          .limit(10),
+      ]);
 
-      // Fetch user sensors
-      const { data: userSensors, error: sensorsError } = await supabase
-        .from('user_sensors')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (sensorsError) throw sensorsError;
+      if (sensorRes.error) throw sensorRes.error;
+      if (userSensorsRes.error) throw userSensorsRes.error;
+      if (thresholdsRes.error) throw thresholdsRes.error;
+      if (alertsRes.error) throw alertsRes.error;
 
-      // Fetch sensor thresholds
-      const { data: thresholds, error: thresholdsError } = await supabase
-        .from('sensor_thresholds')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (thresholdsError) throw thresholdsError;
-
-      // Fetch recent alerts
-      const { data: alertsData, error: alertsError } = await supabase
-        .from('sensor_alerts')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_resolved', false)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (alertsError) throw alertsError;
+      const sensorData = sensorRes.data as SensorReading[] | null;
+      const userSensors = userSensorsRes.data as UserSensor[] | null;
+      const thresholds = thresholdsRes.data as SensorThreshold[] | null;
+      const alertsData = alertsRes.data as SensorAlert[] | null;
 
       // Process sensor data into metrics
       const sensorTypes = ['temperature', 'humidity', 'soil_moisture', 'light_level'];
@@ -194,7 +195,7 @@ export const useDashboardData = (selectedDevice: string, timeRange: string) => {
 
       sensorTypes.forEach(sensorType => {
         const readings = (sensorData || []).filter(r => getSensorValue(r, sensorType) !== null);
-        
+
         if (readings.length === 0) {
           processedMetrics.push({
             name: sensorType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -210,14 +211,11 @@ export const useDashboardData = (selectedDevice: string, timeRange: string) => {
         // Get latest reading
         const latestReading = readings[0];
         const value = getSensorValue(latestReading, sensorType)!;
-        
-        // Calculate status
+
+        // Calculate status and trend
         const status = calculateStatus(value, sensorType, thresholds || []);
-        
-        // Calculate trend
         const trend = calculateTrend(readings, sensorType);
 
-        // Format value
         const unit = getUnit(sensorType);
         const formattedValue = `${value.toFixed(1)}${unit}`;
 

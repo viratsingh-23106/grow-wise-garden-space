@@ -121,6 +121,8 @@ const Subscription = () => {
 
             console.log('Payment verified successfully:', verifyData);
             
+            // Optimistically mark pro while we refresh
+            try { sessionStorage.setItem('justSubscribed','1'); } catch {}
             // Immediately refresh subscription status
             await refreshSubscription();
             

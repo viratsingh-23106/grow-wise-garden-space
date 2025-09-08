@@ -30,9 +30,11 @@ const Dashboard = () => {
   const [selectedDevice, setSelectedDevice] = useState("all");
   const [selectedCrop, setSelectedCrop] = useState("all");
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(true);
+  const [optimisticPro, setOptimisticPro] = useState(false);
 
   const { metrics, devices, alerts, loading: dashboardLoading } = useDashboardData(selectedDevice, timeRange);
-  const canAccessDashboard = isSubscribed || !trialEnded;
+  const isPro = isSubscribed || optimisticPro;
+  const canAccessDashboard = isPro || !trialEnded;
 
   // Refresh subscription when component mounts (useful after payment)
   useEffect(() => {
@@ -40,6 +42,22 @@ const Dashboard = () => {
       refreshSubscription();
     }
   }, [user, refreshSubscription]);
+
+  // Optimistic Pro activation if coming right after checkout
+  useEffect(() => {
+    const flag = sessionStorage.getItem('justSubscribed');
+    if (flag) {
+      setOptimisticPro(true);
+      sessionStorage.removeItem('justSubscribed');
+    }
+  }, []);
+
+  // Clear optimistic flag once real subscription is confirmed
+  useEffect(() => {
+    if (isSubscribed && optimisticPro) {
+      setOptimisticPro(false);
+    }
+  }, [isSubscribed, optimisticPro]);
 
   // Redirect to auth if not logged in
   if (!user) {
@@ -125,7 +143,7 @@ const Dashboard = () => {
           </div>
 
           {/* Trial Upgrade Banner */}
-          {!isSubscribed && !trialEnded && showUpgradeBanner && (
+          {!isPro && !trialEnded && showUpgradeBanner && (
             <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -144,7 +162,7 @@ const Dashboard = () => {
                     <Button
                       onClick={() => window.location.href = '/subscription'}
                       className="bg-amber-600 hover:bg-amber-700 text-white"
-                    >
+                   >
                       Upgrade Now
                     </Button>
                     <Button
@@ -291,7 +309,7 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {isSubscribed ? (
+                    {isPro ? (
                       <>
                         <Button className="h-20 flex-col gap-2">
                           <Download className="h-5 w-5" />
