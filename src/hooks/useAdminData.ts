@@ -304,43 +304,6 @@ export const useAdminData = () => {
     if (!adminSessionToken) return;
     
     try {
-      // First delete related growth guides and their steps
-      const { data: guides, error: guidesError } = await supabase
-        .from('growth_guides')
-        .select('id')
-        .eq('product_id', productId);
-
-      if (guidesError) throw guidesError;
-
-      if (guides && guides.length > 0) {
-        // Delete guide steps first
-        for (const guide of guides) {
-          const { error: stepsError } = await supabase
-            .from('guide_steps')
-            .delete()
-            .eq('guide_id', guide.id);
-
-          if (stepsError) throw stepsError;
-
-          // Delete user progress
-          const { error: progressError } = await supabase
-            .from('user_progress')
-            .delete()
-            .eq('guide_id', guide.id);
-
-          if (progressError) throw progressError;
-        }
-
-        // Delete growth guides
-        const { error: deleteGuidesError } = await supabase
-          .from('growth_guides')
-          .delete()
-          .eq('product_id', productId);
-
-        if (deleteGuidesError) throw deleteGuidesError;
-      }
-
-      // Now delete the product using admin RPC
       const { error } = await supabase.rpc('admin_delete_product', {
         admin_token: adminSessionToken,
         p_id: productId

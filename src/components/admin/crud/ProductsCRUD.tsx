@@ -61,7 +61,7 @@ const ProductsCRUD = () => {
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (product: AdminProduct) => {
+  const handleEdit = async (product: AdminProduct) => {
     setFormData({
       name: product.name,
       type: product.type,
@@ -83,6 +83,34 @@ const ProductsCRUD = () => {
     setSelectedProduct(product);
     setIsEditing(true);
     setIsDialogOpen(true);
+
+    // Load existing growth guide and steps if any
+    const { data: guide } = await supabase
+      .from('growth_guides')
+      .select('*')
+      .eq('product_id', product.id)
+      .maybeSingle();
+
+    if (guide) {
+      const { data: steps } = await supabase
+        .from('guide_steps')
+        .select('*')
+        .eq('guide_id', guide.id)
+        .order('step_number');
+
+      setFormData(prev => ({
+        ...prev,
+        growthGuideTitle: guide.title || '',
+        growthGuideDescription: guide.description || '',
+        guideSteps: (steps && steps.length > 0) ? steps.map((s: any) => ({
+          title: s.title || '',
+          description: s.description || '',
+          video_url: s.video_url || '',
+          document_url: s.document_url || '',
+          estimated_duration: s.estimated_duration || ''
+        })) : prev.guideSteps
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -107,26 +135,12 @@ const ProductsCRUD = () => {
         isEditing ? selectedProduct?.id : undefined
       );
 
-      // Create growth guide if provided
-      if (formData.growthGuideTitle && productId) {
-        const { data: guide, error: guideError } = await supabase
-          .from('growth_guides')
-          .insert({
-            product_id: productId,
-            title: formData.growthGuideTitle,
-            description: formData.growthGuideDescription,
-            total_steps: formData.guideSteps.length
-          })
-          .select()
-          .single();
-
-        if (guideError) throw guideError;
-
-        // Create guide steps
-        const steps = formData.guideSteps
+      // Create or update growth guide and steps
+      if (productId) {
+        // Prepare steps from form
+        const stepsPayload = formData.guideSteps
           .filter(step => step.title.trim())
           .map((step, index) => ({
-            guide_id: guide.id,
             step_number: index + 1,
             title: step.title,
             description: step.description,
@@ -135,12 +149,52 @@ const ProductsCRUD = () => {
             estimated_duration: step.estimated_duration || null
           }));
 
-        if (steps.length > 0) {
-          const { error: stepsError } = await supabase
-            .from('guide_steps')
-            .insert(steps);
+        const { data: existingGuide } = await supabase
+          .from('growth_guides')
+          .select('*')
+          .eq('product_id', productId)
+          .maybeSingle();
 
-          if (stepsError) throw stepsError;
+        if (existingGuide) {
+          // Update guide
+          await supabase
+            .from('growth_guides')
+            .update({
+              title: formData.growthGuideTitle || existingGuide.title,
+              description: formData.growthGuideDescription || existingGuide.description,
+              total_steps: stepsPayload.length
+            })
+            .eq('id', existingGuide.id);
+
+          // Replace steps
+          await supabase.from('guide_steps').delete().eq('guide_id', existingGuide.id);
+          if (stepsPayload.length > 0) {
+            await supabase.from('guide_steps').insert(
+              stepsPayload.map(s => ({ ...s, guide_id: existingGuide.id }))
+            );
+          }
+        } else if (formData.growthGuideTitle || stepsPayload.length > 0) {
+          // Create new guide
+          const { data: guide, error: guideError } = await supabase
+            .from('growth_guides')
+            .insert({
+              product_id: productId,
+              title: formData.growthGuideTitle || 'Growing Guide',
+              description: formData.growthGuideDescription || '',
+              total_steps: stepsPayload.length
+            })
+            .select()
+            .single();
+
+          if (guideError) throw guideError;
+
+          if (stepsPayload.length > 0) {
+            const { error: stepsError } = await supabase
+              .from('guide_steps')
+              .insert(stepsPayload.map(s => ({ ...s, guide_id: guide.id })));
+
+            if (stepsError) throw stepsError;
+          }
         }
       }
       
