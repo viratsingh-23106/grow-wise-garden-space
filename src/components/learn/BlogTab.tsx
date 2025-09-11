@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import BlogSubmissionForm from "@/components/learn/BlogSubmissionForm";
+import BlogDetailDialog from "@/components/learn/BlogDetailDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface BlogTabProps {
@@ -17,6 +18,8 @@ interface BlogTabProps {
 const BlogTab = ({ searchQuery }: BlogTabProps) => {
   const { user } = useAuth();
   const [isSubmissionOpen, setIsSubmissionOpen] = useState(false);
+  const [selectedBlog, setSelectedBlog] = useState<any>(null);
+  const [isBlogDetailOpen, setIsBlogDetailOpen] = useState(false);
 
   const { data: blogPosts, refetch } = useQuery({
     queryKey: ['blog-posts', searchQuery],
@@ -163,7 +166,15 @@ const BlogTab = ({ searchQuery }: BlogTabProps) => {
                 </div>
               )}
               
-              <Button variant="ghost" className="w-full mt-4 text-green-600 hover:text-green-700 hover:bg-green-50">
+              <Button 
+                variant="ghost" 
+                className="w-full mt-4 text-green-600 hover:text-green-700 hover:bg-green-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedBlog(post);
+                  setIsBlogDetailOpen(true);
+                }}
+              >
                 Read More <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardContent>
@@ -186,6 +197,16 @@ const BlogTab = ({ searchQuery }: BlogTabProps) => {
           )}
         </div>
       )}
+
+      {/* Blog Detail Dialog */}
+      <BlogDetailDialog 
+        blog={selectedBlog}
+        isOpen={isBlogDetailOpen}
+        onClose={() => {
+          setIsBlogDetailOpen(false);
+          setSelectedBlog(null);
+        }}
+      />
     </div>
   );
 };

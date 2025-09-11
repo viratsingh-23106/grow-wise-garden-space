@@ -56,13 +56,23 @@ const GrowingGuideSection = ({ productId, growthGuide }: GrowingGuideSectionProp
 
   const updateProgressMutation = useMutation({
     mutationFn: async ({ stepNumber, isCompleted }: { stepNumber: number; isCompleted: boolean }) => {
-      if (!user || !growthGuide) return;
+      if (!user || !growthGuide) {
+        console.log('Missing user or growthGuide for mutation:', { user: !!user, growthGuide: !!growthGuide });
+        return;
+      }
 
       const completedSteps = isCompleted 
         ? Math.max(stepNumber, userProgress?.completed_steps || 0)
         : Math.min(stepNumber - 1, userProgress?.completed_steps || 0);
 
-      const { error } = await supabase
+      console.log('Updating progress:', {
+        guide_id: growthGuide.id,
+        user_id: user.id,
+        completed_steps: completedSteps,
+        is_completed: completedSteps >= (guideSteps?.length || 0)
+      });
+
+      const { data, error } = await supabase
         .from('user_progress')
         .upsert({
           guide_id: growthGuide.id,
@@ -70,17 +80,34 @@ const GrowingGuideSection = ({ productId, growthGuide }: GrowingGuideSectionProp
           completed_steps: completedSteps,
           is_completed: completedSteps >= (guideSteps?.length || 0),
           last_accessed: new Date().toISOString(),
-        });
+        }, {
+          onConflict: 'guide_id,user_id'
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Progress update error:', error);
+        throw error;
+      }
+      
+      console.log('Progress updated successfully:', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userProgress', productId, user?.id] });
     },
+    onError: (error) => {
+      console.error('Progress mutation failed:', error);
+    }
   });
 
   const handleStepToggle = (stepNumber: number) => {
+    if (!user) {
+      console.log('No user found for step toggle');
+      return;
+    }
+    
     const isCompleted = (userProgress?.completed_steps || 0) >= stepNumber;
+    console.log('Toggling step:', stepNumber, 'Currently completed:', isCompleted);
     updateProgressMutation.mutate({ stepNumber, isCompleted: !isCompleted });
   };
 
