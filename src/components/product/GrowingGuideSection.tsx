@@ -16,7 +16,7 @@ interface GrowingGuideSectionProps {
 const GrowingGuideSection = ({ productId, growthGuide }: GrowingGuideSectionProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  const [expandedStep, setExpandedStep] = useState<number | null>(1); // Auto-expand first step
 
   // Fetch guide steps
   const { data: guideSteps } = useQuery({
@@ -210,12 +210,24 @@ const GrowingGuideSection = ({ productId, growthGuide }: GrowingGuideSectionProp
                           Video Guide
                         </h4>
                         <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                          <iframe 
-                            className="w-full h-full"
-                            src={step.video_url}
-                            title={`${step.title} - Video Guide`}
-                            allowFullScreen
-                          />
+                          {step.video_url.includes('youtube.com') || step.video_url.includes('youtu.be') ? (
+                            <iframe 
+                              className="w-full h-full"
+                              src={step.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                              title={`${step.title} - Video Guide`}
+                              allowFullScreen
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            />
+                          ) : (
+                            <video 
+                              className="w-full h-full" 
+                              controls
+                              preload="metadata"
+                            >
+                              <source src={step.video_url} type="video/mp4" />
+                              Your browser does not support the video tag.
+                            </video>
+                          )}
                         </div>
                       </div>
                     )}
